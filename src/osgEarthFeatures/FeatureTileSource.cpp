@@ -107,6 +107,13 @@ FeatureTileSource::initialize( const std::string& referenceURI, const Profile* o
     if ( _features.valid() )
     {
         _features->initialize( referenceURI );
+        if (_features->getFeatureProfile())
+        {
+            setProfile( Profile::create(_features->getFeatureProfile()->getSRS(),
+                _features->getFeatureProfile()->getExtent().xMin(), _features->getFeatureProfile()->getExtent().yMin(),
+                _features->getFeatureProfile()->getExtent().xMax(), _features->getFeatureProfile()->getExtent().yMax()));
+
+        }
     }
     else
     {
