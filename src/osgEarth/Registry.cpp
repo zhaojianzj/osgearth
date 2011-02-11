@@ -245,6 +245,27 @@ Registry::setShaderFactory( ShaderFactory* lib )
         _shaderLib = lib;
 }
 
+ImageCompressor*
+Registry::getImageCompressor(const std::string& driver)
+{
+    std::string drv = driver;
+    if (drv.empty())
+    {
+        drv = "osgearth_fastdxt";
+    }
+    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(_imageCompressorMutex);
+    ImageCompressorMap::iterator iter = _imageCompressors.find(driver);
+    if (iter != _imageCompressors.end()) return iter->second.get();
+    //Try to load the compressor
+    osg::ref_ptr< ImageCompressor> compressor = dynamic_cast<ImageCompressor*>(osgDB::readObjectFile("." + drv));
+    if (compressor.valid())
+    {
+        //Store the compressor in the cache
+        _imageCompressors[driver] = compressor.get();
+    }
+    return compressor.release();
+}
+
 UID
 Registry::createUID()
 {

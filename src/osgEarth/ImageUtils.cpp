@@ -18,11 +18,14 @@
  */
 
 #include <osgEarth/ImageUtils>
+#include <osgEarth/ImageCompressor>
+#include <osgEarth/Registry>
 #include <osg/Notify>
 #include <osg/Texture>
 #include <osg/ImageSequence>
 #include <osg/Timer>
 #include <osgDB/Registry>
+#include <osgDB/ReadFile>
 #include <string.h>
 #include <memory.h>
 
@@ -516,6 +519,19 @@ ImageUtils::isCompressed(const osg::Image *image)
         default:
             return false;
     }
+}
+
+osg::Image*
+ImageUtils::compress(osg::Image *image, const std::string& compressor)
+{
+    ImageCompressor* imageCompressor = osgEarth::Registry::instance()->getImageCompressor(compressor);
+    //static osg::ref_ptr< ImageCompressor> compressor = dynamic_cast<ImageCompressor*>(osgDB::readObjectFile(".osgearth_fastdxt"));
+    if (imageCompressor)
+    {
+        OSG_NOTICE << "compressing" << std::endl;
+        return imageCompressor->compress( image );
+    }
+    return 0;
 }
 
 //------------------------------------------------------------------------

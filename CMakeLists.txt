@@ -136,6 +136,10 @@ SET(OSG_DIR "" CACHE PATH "set to base osg install path")
 
 SET(CMAKE_DEBUG_POSTFIX  "d" CACHE STRING "add a postfix, usually d on windows")
 
+# FastDXT
+OPTION(BUILD_FASTDXT_PLUGIN "Build the FastDXT ImageCompressor plugin" OFF)
+
+
 FIND_PACKAGE(OSG)
 #FIND_PACKAGE(GDAL)
 

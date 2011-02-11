@@ -25,6 +25,7 @@
 #include <osgEarth/Capabilities>
 #include <osgEarth/Profile>
 #include <osgEarth/TaskService>
+#include <osgEarth/ImageCompressor>
 #include <osgEarth/ShaderComposition>
 #include <OpenThreads/ReentrantMutex>
 #include <OpenThreads/ScopedLock>
@@ -109,6 +110,8 @@ namespace osgEarth
         ShaderFactory* getShaderFactory() const;
         void setShaderFactory( ShaderFactory* lib );
 
+        osgEarth::ImageCompressor* getImageCompressor(const std::string& driver);
+
         /**
          * Gets a reference to the global task service manager.
          */
@@ -157,6 +160,10 @@ namespace osgEarth
 
         osg::ref_ptr< Capabilities > _caps;
         void initCapabilities();
+
+        OpenThreads::Mutex _imageCompressorMutex;
+        typedef std::map<std::string,osg::ref_ptr<ImageCompressor>> ImageCompressorMap;
+        ImageCompressorMap _imageCompressors;
     };
 }
 

@@ -35,6 +35,7 @@ SET(LIB_PUBLIC_HEADERS
     GeoMath
     HeightFieldUtils
     HTTPClient
+	ImageCompressor
     ImageToHeightFieldConverter
     ImageLayer
     ImageMosaic
