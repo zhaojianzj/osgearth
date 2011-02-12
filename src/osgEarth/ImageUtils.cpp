@@ -525,10 +525,8 @@ osg::Image*
 ImageUtils::compress(osg::Image *image, const std::string& compressor)
 {
     ImageCompressor* imageCompressor = osgEarth::Registry::instance()->getImageCompressor(compressor);
-    //static osg::ref_ptr< ImageCompressor> compressor = dynamic_cast<ImageCompressor*>(osgDB::readObjectFile(".osgearth_fastdxt"));
     if (imageCompressor)
     {
-        OSG_NOTICE << "compressing" << std::endl;
         return imageCompressor->compress( image );
     }
     return 0;
