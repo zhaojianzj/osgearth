@@ -242,12 +242,6 @@ osg::Node* BuildTextOperator::operator()(const FeatureList&   features,
 
 			if (!intersector->containsIntersections())
 			{
-				if (text.compare("OAK PARK DR") == 0 || text.compare("FOREST KNOLLS DR") == 0)
-				{
-					int x = 22;
-					x -= 10;
-				}
-
 				result->addDrawable( t );
 				if (removeDuplicateLabels) labelNames.insert(text);
 			}
