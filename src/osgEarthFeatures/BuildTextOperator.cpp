@@ -33,6 +33,8 @@
 #include <osg/PolygonOffset>
 #include <osg/ClusterCullingCallback>
 #include <osgText/Text>
+#include <osgUtil/IntersectionVisitor>
+#include <osgUtil/PolytopeIntersector>
 
 #define LC "[BuildTextOperator] "
 
@@ -231,9 +233,30 @@ osg::Node* BuildTextOperator::operator()(const FeatureList&   features,
             t->setCullCallback( new CullPlaneCallback( position * context.inverseReferenceFrame() ) );
         }
 
-        result->addDrawable( t );
+		if (_hideClutter)
+		{
+			osg::BoundingBox tBound = t->getBound();
+			osg::ref_ptr<osgUtil::PolytopeIntersector> intersector = new osgUtil::PolytopeIntersector(osgUtil::Intersector::MODEL, tBound.xMin(), tBound.yMin(), tBound.xMax(), tBound.yMax());
+			osgUtil::IntersectionVisitor intersectVisitor(intersector.get());
+			result->accept(intersectVisitor);
 
-        if (removeDuplicateLabels) labelNames.insert(text);
+			if (!intersector->containsIntersections())
+			{
+				if (text.compare("OAK PARK DR") == 0 || text.compare("FOREST KNOLLS DR") == 0)
+				{
+					int x = 22;
+					x -= 10;
+				}
+
+				result->addDrawable( t );
+				if (removeDuplicateLabels) labelNames.insert(text);
+			}
+		}
+		else
+		{
+			result->addDrawable( t );
+			if (removeDuplicateLabels) labelNames.insert(text);
+		}
     }
     return result;
 }

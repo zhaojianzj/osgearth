@@ -35,6 +35,9 @@ namespace osgEarth { namespace Drivers
 
         optional<double>& heightOffset() { return _heightOffset; }
         const optional<double>& heightOffset() const { return _heightOffset; }
+        
+        optional<bool>& hideClutter() { return _hideClutter; }
+        const optional<bool>& hideClutter() const { return _hideClutter; }
 
     public:
         FeatureLabelModelOptions( const PluginOptions* opt =0L ) : FeatureModelSourceOptions( opt ),
@@ -43,6 +46,7 @@ namespace osgEarth { namespace Drivers
             driver() = "feature_geom";
             config().getIfSet( "url", _url );
             config().getIfSet( "height_offset", _heightOffset );
+            config().getIfSet( "hide_clutter", _hideClutter );
         }
 
     protected:
@@ -50,11 +54,13 @@ namespace osgEarth { namespace Drivers
             Config conf = FeatureModelSourceOptions::toConfig();
             conf.updateIfSet( "url", _url );
             conf.updateIfSet( "height_offset", _heightOffset );
+            conf.updateIfSet( "hide_clutter", _hideClutter );
             return conf;
         }
 
         optional<std::string> _url;
         optional<double> _heightOffset;
+        optional<bool> _hideClutter;
     };
 
 } } // namespace osgEarth::Drivers
