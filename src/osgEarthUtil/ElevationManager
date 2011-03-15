@@ -146,6 +146,17 @@ namespace osgEarthUtil
          */
         ElevationInterpolation getElevationInterpolation() const;
 
+        /**
+        * Sets the maximum level override for elevation queries.
+        * A value of -1 turns off the override.
+        */
+        void setMaxLevelOverride(int maxLevelOverride);
+
+        /**
+        * Gets the maximum level override for elevation queries.
+        */
+        int getMaxLevelOverride() const;
+
 
         /**
          * Gets the map with which this elevation manager is associated.
@@ -164,6 +175,7 @@ namespace osgEarthUtil
         int _lastMapRevision;
         int _tileSize;
         unsigned int _maxDataLevel;
+        int _maxLevelOverride;
         Technique _technique;
         ElevationInterpolation _interpolation;
 

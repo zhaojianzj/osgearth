@@ -32,6 +32,7 @@ ElevationManager::postCTOR()
     _maxCacheSize = 100;
     _technique = TECHNIQUE_GEOMETRIC;
     _interpolation = INTERP_BILINEAR;
+    _maxLevelOverride = -1;
 
     if ( !_mapEngine.valid() )
     {
@@ -112,6 +113,21 @@ ElevationManager::getElevationInterpolation() const
     return _interpolation;
 }
 
+void
+ElevationManager::setMaxLevelOverride(int maxLevelOverride)
+{
+    _maxLevelOverride = maxLevelOverride;
+}
+
+/**
+* Gets the maximum level override for elevation queries.
+*/
+int
+ElevationManager::getMaxLevelOverride() const
+{
+    return _maxLevelOverride;
+}
+
 bool
 ElevationManager::getElevation(double x, double y,
                                double resolution,
@@ -131,10 +147,14 @@ ElevationManager::getElevation(double x, double y,
     // this is the ideal LOD for the requested resolution:
     unsigned int idealLevel = resolution > 0.0
         ? _map->getProfile()->getLevelOfDetailForHorizResolution( resolution, _tileSize )
-        : _maxDataLevel;        
+        : _maxDataLevel;  
 
     // based on the heightfields available, this is the best we can theorically do:
     unsigned int bestAvailLevel = osg::minimum( idealLevel, _maxDataLevel );
+    if (_maxLevelOverride >= 0)
+    {
+        bestAvailLevel = osg::minimum(bestAvailLevel, (unsigned int)_maxLevelOverride);
+    }
     
     // transform the input coords to map coords:
     double map_x = x, map_y = y;
@@ -243,7 +263,6 @@ ElevationManager::getElevation(double x, double y,
 
     // see what the actual resolution of the heightfield is.
     out_resolution = (double)hf->getXInterval();
-
 
     // finally it's time to get a height value:
     if ( _technique == TECHNIQUE_PARAMETRIC )

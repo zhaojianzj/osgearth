@@ -196,6 +196,8 @@ MapLayer::fromConfig( const Config& conf )
     conf.getIfSet("min_filter","NEAREST",               _minFilter,osg::Texture::NEAREST);
     conf.getIfSet("min_filter","NEAREST_MIPMAP_LINEAR", _minFilter,osg::Texture::NEAREST_MIPMAP_LINEAR);
     conf.getIfSet("min_filter","NEAREST_MIPMAP_NEAREST",_minFilter,osg::Texture::NEAREST_MIPMAP_NEAREST);
+
+    conf.getIfSet( "max_data_level", _maxDataLevel );
 }
 
 Config
@@ -237,6 +239,8 @@ MapLayer::toConfig() const
     conf.addIfSet("min_filter","NEAREST",               _minFilter,osg::Texture::NEAREST);
     conf.addIfSet("min_filter","NEAREST_MIPMAP_LINEAR", _minFilter,osg::Texture::NEAREST_MIPMAP_LINEAR);
     conf.addIfSet("min_filter","NEAREST_MIPMAP_NEAREST",_minFilter,osg::Texture::NEAREST_MIPMAP_NEAREST);
+
+    conf.updateIfSet( "max_data_level", _maxDataLevel );
 
 
     return conf;
@@ -324,11 +328,20 @@ MapLayer::getTileSize() const
 unsigned int
 MapLayer::getMaxDataLevel() const
 {
+    //Try the setting first
+    if (_maxDataLevel.isSet())
+    {
+        return _maxDataLevel.get();
+    }
+
+    //Try the TileSource
 	TileSource* ts = getTileSource();
 	if (ts)
 	{
 		return ts->getMaxDataLevel();
 	}
+
+    //Just default
 	return 20;
 }
 

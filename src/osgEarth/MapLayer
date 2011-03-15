@@ -349,6 +349,7 @@ namespace osgEarth
         optional<double> _edgeBufferRatio;
 		optional<osg::Texture::FilterMode> _magFilter;
         optional<osg::Texture::FilterMode> _minFilter;
+        optional<unsigned int> _maxDataLevel;
 
         bool _cacheOnlyEnv;
 
