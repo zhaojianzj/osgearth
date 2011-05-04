@@ -7,7 +7,24 @@ ENDIF(DYNAMIC_OSGEARTH)
 SET(LIB_NAME osgEarthUtil)
 
 SET(HEADER_PATH ${OSGEARTH_SOURCE_DIR}/include/${LIB_NAME})
-SET(LIB_PUBLIC_HEADERS    
+
+
+IF(NOT (${OPENSCENEGRAPH_VERSION} VERSION_LESS "2.9.10"))
+
+    SET( POST_2_9_10_HEADERS
+        ShadowDecorator
+    )
+    
+    SET( POST_2_9_10_SOURCES
+        ShadowDecorator.cpp
+    )
+    
+ENDIF(NOT (${OPENSCENEGRAPH_VERSION} VERSION_LESS "2.9.10"))
+
+
+
+SET(LIB_PUBLIC_HEADERS  
+    ${POST_2_9_10_HEADERS}  
     AutoClipPlaneHandler
     Common
     Controls
@@ -21,7 +38,7 @@ SET(LIB_PUBLIC_HEADERS
     ObjectPlacer
     ObjectLocator
     OceanSurfaceNode
-    SkyNode
+    SkyNode    
     SpatialData
     StarData
     Viewpoint
@@ -31,6 +48,7 @@ SET(LIB_PUBLIC_HEADERS
 
 ADD_LIBRARY(${LIB_NAME} SHARED
     ${LIB_PUBLIC_HEADERS}  
+    ${POST_2_9_10_SOURCES}
     AutoClipPlaneHandler.cpp
     ClampCallback.cpp
     Controls.cpp
@@ -42,8 +60,8 @@ ADD_LIBRARY(${LIB_NAME} SHARED
     ObjectPlacer.cpp
     ObjectLocator.cpp
     OceanSurfaceNode.cpp
-    SpatialData.cpp
     SkyNode.cpp
+    SpatialData.cpp
     Viewpoint.cpp
 	WFS.cpp
     WMS.cpp
@@ -63,7 +81,7 @@ osgEarthFeatures
 osgEarthSymbology
 )
 
-LINK_WITH_VARIABLES(${LIB_NAME} OSG_LIBRARY OSGUTIL_LIBRARY OSGSIM_LIBRARY OSGTERRAIN_LIBRARY OSGDB_LIBRARY OSGFX_LIBRARY OSGVIEWER_LIBRARY OSGTEXT_LIBRARY OSGGA_LIBRARY OPENTHREADS_LIBRARY)
+LINK_WITH_VARIABLES(${LIB_NAME} OSG_LIBRARY OSGUTIL_LIBRARY OSGSIM_LIBRARY OSGTERRAIN_LIBRARY OSGDB_LIBRARY OSGFX_LIBRARY OSGVIEWER_LIBRARY OSGTEXT_LIBRARY OSGGA_LIBRARY OSGSHADOW_LIBRARY OPENTHREADS_LIBRARY)
 LINK_CORELIB_DEFAULT(${LIB_NAME} ${CMAKE_THREAD_LIBS_INIT} ${MATH_LIBRARY})
 
 INCLUDE(ModuleInstall OPTIONAL)

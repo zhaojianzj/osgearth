@@ -28,8 +28,11 @@
 #include <osgEarthUtil/AutoClipPlaneHandler>
 #include <osgEarthUtil/Controls>
 #include <osgEarthUtil/Graticule>
+#include <osgEarthUtil/ShadowDecorator>
 #include <osgEarthUtil/SkyNode>
 #include <osgEarthUtil/Viewpoint>
+
+#define LC "[osgearth_viewer] "
 
 using namespace osgEarth::Util;
 using namespace osgEarth::Util::Controls;
@@ -44,6 +47,7 @@ usage( const std::string& msg )
     OE_NOTICE << "   --animateSky    : animates the sun across the sky" << std::endl;
     OE_NOTICE << "   --autoclip      : activates the auto clip-plane handler" << std::endl;
     OE_NOTICE << "   --jump          : automatically jumps to first viewpoint" << std::endl;
+    OE_NOTICE << "   --shadows       : apply shadowing" << std::endl;
         
     return -1;
 }
@@ -128,6 +132,7 @@ main(int argc, char** argv)
     bool animateSky   = arguments.read( "--animateSky");
     bool useSky       = arguments.read( "--sky" ) || animateSky;
     bool jump         = arguments.read( "--jump" );
+    bool useShadows   = arguments.read( "--shadows" );
 
     // load the .earth file from the command line.
     osg::Node* earthNode = osgDB::readNodeFiles( arguments );
@@ -187,6 +192,15 @@ main(int argc, char** argv)
             if ( useSky || useAutoClip )
             {
                 viewer.getCamera()->addEventCallback( new AutoClipPlaneCallback() );
+            }
+
+            if ( useShadows )
+            {
+                ShadowDecorator* shadow = new ShadowDecorator();
+                shadow->setLight( viewer.getLight() );
+                mapNode->addTerrainDecorator( shadow );
+                
+                OE_INFO << LC << "Activating shadows" << std::endl;
             }
         }
 

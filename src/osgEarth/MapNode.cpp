@@ -233,7 +233,7 @@ MapNode::init()
     _overlayDecorator = new OverlayDecorator();
     if ( _mapNodeOptions.overlayVertexWarping().isSet() )
         _overlayDecorator->setVertexWarping( *_mapNodeOptions.overlayVertexWarping() );
-    addTerrainDecorator( _overlayDecorator.get() );
+    //addTerrainDecorator( _overlayDecorator.get() );
 
     // install any pre-existing model layers:
     ModelLayerVector modelLayers;
