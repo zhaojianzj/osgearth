@@ -52,7 +52,7 @@ ShadowDecorator::onInstall( TerrainEngineNode* engine )
     osgShadow::MinimalShadowMap* msm = new osgShadow::LightSpacePerspectiveShadowMapDB();   
 
     float minLightMargin = 10.f;
-    float maxFarPlane = 0;
+    float maxFarPlane = 1e6;
     unsigned int texSize = 1024;
     unsigned int baseTexUnit = 0;
     unsigned int shadowTexUnit = 7;
