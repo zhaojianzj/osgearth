@@ -55,7 +55,7 @@ usage( const std::string& msg )
 osg::Node*
 createControlPanel( osgViewer::View* view, const std::vector<Viewpoint>& vps )
 {
-    ControlCanvas* canvas = new ControlCanvas( view );
+    ControlCanvas* canvas = ControlCanvas::get( view );
 
     // the outer container:
     Grid* g = new Grid();
@@ -77,6 +77,7 @@ createControlPanel( osgViewer::View* view, const std::vector<Viewpoint>& vps )
     }
 
     canvas->addControl( g );
+
     return canvas;
 }
 
