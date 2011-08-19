@@ -176,6 +176,7 @@ MapLayer::fromConfig( const Config& conf )
     conf.getIfSet( "gamma", _gamma );
     conf.getIfSet( "enabled", _enabled );
     conf.getIfSet( "edge_buffer_ratio", _edgeBufferRatio);
+    conf.getIfSet( "reprojected_tilesize", _reprojectedTileSize);
     conf.getObjIfSet( "profile", _profileConf );
 	std::string transparent_color = conf.value<std::string>("transparent_color", "");
 	if (!transparent_color.empty())
@@ -220,6 +221,7 @@ MapLayer::toConfig() const
     conf.updateIfSet( "gamma", _gamma );
     conf.updateIfSet( "enabled", _enabled );
     conf.updateIfSet("edge_buffer_ratio", _edgeBufferRatio);
+    conf.updateIfSet("reprojected_tilesize", _reprojectedTileSize);
     conf.updateObjIfSet( "profile", _profileConf );
 	if (_transparentColor.isSet())
 	{
