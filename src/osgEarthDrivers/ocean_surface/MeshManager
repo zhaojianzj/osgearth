@@ -24,9 +24,11 @@
 #include "Manifold"
 #include "AMRGeometry"
 #include <osgEarth/Map>
+#include <osgEarth/ImageLayer>
 #include <osgEarth/TaskService>
 #include <osg/Geode>
 #include <osg/Geometry>
+#include <osg/Texture2D>
 #include <queue>
 #include <deque>
 #include <list>
@@ -70,7 +72,7 @@ class MeshManager : public osg::Referenced
 {
 public:
     /** Construct the manager that will manage the mesh for the specified manifold. */
-    MeshManager( Manifold* manifold, Map* map );
+    MeshManager( Manifold* manifold, Map* map, ImageLayer* maskLayer );
 
 public:
     /** Add a shared vertex (and its normal) to the mesh. */
@@ -97,14 +99,12 @@ public:
 
     /** gets a vertex */
     inline const MeshNode& node( NodeIndex i ) { return _nodes[i]; }
-    //inline const osg::Vec3f& vert( NodeIndex i ) { return _nodes[i]._vertex; }
-    //inline const osg::Vec3d& coord( NodeIndex i ) { return _nodes[i]._manifoldCoord; }
-    //inline const osg::Vec3f& normal( NodeIndex i ) { return _nodes[i]._normal; }
-    //inline const osg::Vec3d& geoCoord( NodeIndex i ) { return _nodes[i]._geodeticCoord; }
 
 public:
-    osg::ref_ptr<Manifold> _manifold;
-    osg::ref_ptr<Map>      _map;
+    osg::ref_ptr<Manifold>       _manifold;
+    osg::ref_ptr<Map>            _map;
+    osg::ref_ptr<ImageLayer>     _maskLayer;
+    osg::ref_ptr<osg::Texture2D> _surfaceTex;
 
     DiamondQueue         _dirtyQueue;        // queue for primitive set refresh jobs
     DiamondPriorityQueue _splitQueue;        // queue for diamond split jobs

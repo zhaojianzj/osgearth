@@ -34,6 +34,7 @@
 #include <osgEarthUtil/Annotation>
 #include <osgEarthSymbology/Color>
 #include <osgEarthDrivers/kml/KML>
+#include <osgEarthDrivers/ocean_surface/OceanSurface>
 
 using namespace osgEarth::Util;
 using namespace osgEarth::Util::Annotation;
@@ -51,7 +52,7 @@ usage( const std::string& msg )
     OE_NOTICE << "   --autoclip      : activates the auto clip-plane handler" << std::endl;
     OE_NOTICE << "   --dms           : format coordinates as degrees/minutes/seconds" << std::endl;
     OE_NOTICE << "   --mgrs          : format coordinates as MGRS" << std::endl;
-    
+    OE_NOTICE << "   --ocean         : display an ocean surface layer, if found" << std::endl;   
         
     return -1;
 }
@@ -61,6 +62,7 @@ static Control*          s_controlPanel  =0L;
 static SkyNode*          s_sky           =0L;
 static bool              s_dms           =false;
 static bool              s_mgrs          =false;
+static bool              s_ocean         =false;
 
 struct SkySliderHandler : public ControlEventHandler
 {
@@ -323,6 +325,7 @@ main(int argc, char** argv)
     bool useSky       = arguments.read( "--sky" );
     s_dms             = arguments.read( "--dms" );
     s_mgrs            = arguments.read( "--mgrs" );
+    s_ocean           = arguments.read( "--ocean" );
 
     std::string kmlFile;
     arguments.read( "--kml", kmlFile );
@@ -407,6 +410,14 @@ main(int argc, char** argv)
                 KMLUIBuilder uibuilder( ControlCanvas::get(&viewer) );
                 root->accept( uibuilder );                
             }
+        }
+
+        // Load an ocean surface if requested
+        if ( s_ocean )
+        {
+            ImageLayer* maskLayer = mapNode->getMap()->getImageLayerByName( "ocean" );
+            osg::Node* oceanNode = OceanSurface::loadOceanSurface( mapNode->getMap(), maskLayer );
+            root->insertChild( 0, oceanNode );
         }
     }
 

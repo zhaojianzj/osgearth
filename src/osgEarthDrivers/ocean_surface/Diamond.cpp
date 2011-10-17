@@ -283,6 +283,7 @@ Diamond::cull( osgUtil::CullVisitor* cv )
         return 0;
     }
 
+#ifdef CULL_BACK_FACING_DIAMONDS
     // Back-face culling:
     // If the dot product of the eyepoint with each of the four ancestors is negative, then the
     // entire diamond is facing away from the camera and can be culled.
@@ -300,6 +301,7 @@ Diamond::cull( osgUtil::CullVisitor* cv )
         if ( i == 4 )
             return 0;
     }
+#endif
 
     // this will determine whether we actually add this diamond to the draw list later. we still
     // have to traverse children that are in the extended bounds (even if they're not in the view

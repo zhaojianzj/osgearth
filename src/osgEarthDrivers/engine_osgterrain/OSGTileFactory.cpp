@@ -220,7 +220,8 @@ OSGTileFactory::hasMoreLevels( Map* map, const TileKey& key )
     {
         const ImageLayerOptions& opt = i->get()->getImageLayerOptions();
 
-        if ( !opt.maxLevel().isSet() || key.getLevelOfDetail() < (unsigned int)*opt.maxLevel() )
+        if ( i->get()->isActive() && 
+             ( !opt.maxLevel().isSet() || key.getLevelOfDetail() < (unsigned int)*opt.maxLevel() ) )
         {
             more_levels = true;
             break;
@@ -547,7 +548,7 @@ OSGTileFactory::createPopulatedTile(const MapFrame&  mapf,
         GeoImageData imageData;
 
         // Only try to create images if the key is valid
-        if ( layer->isKeyValid( key ) )
+        if ( layer->isActive() && layer->isKeyValid( key ) )
         {
             imageData._image = layer->createImage( key );
             imageData._layerUID = layer->getUID();

@@ -41,6 +41,8 @@ AMRTriangle::AMRTriangle()
 #define SET_UNIFORM(X,Y,Z) \
     _stateSet->getOrCreateUniform( X , Y )->set( Z )
 
+#define NO_LOCALIZE
+
 
 AMRTriangle::AMRTriangle(const MeshNode& n0, const osg::Vec2& t0,
                          const MeshNode& n1, const osg::Vec2& t1, 
@@ -59,13 +61,15 @@ _node0(n0), _node1(n1), _node2(n2)
     SET_UNIFORM( "c1", osg::Uniform::FLOAT_VEC3, _node1._geodeticCoord );
     SET_UNIFORM( "c2", osg::Uniform::FLOAT_VEC3, _node2._geodeticCoord );
 
-    //SET_UNIFORM( "v0", osg::Uniform::FLOAT_VEC3, _node0._vertex );
-    //SET_UNIFORM( "v1", osg::Uniform::FLOAT_VEC3, _node1._vertex );
-    //SET_UNIFORM( "v2", osg::Uniform::FLOAT_VEC3, _node2._vertex );
-
+#ifdef NO_LOCALIZE
+    SET_UNIFORM( "v0", osg::Uniform::FLOAT_VEC3, _node0._vertex );
+    SET_UNIFORM( "v1", osg::Uniform::FLOAT_VEC3, _node1._vertex );
+    SET_UNIFORM( "v2", osg::Uniform::FLOAT_VEC3, _node2._vertex );
+#else
     SET_UNIFORM( "v0", osg::Uniform::FLOAT_VEC3, _node0._vertex * _world2local );
     SET_UNIFORM( "v1", osg::Uniform::FLOAT_VEC3, _node1._vertex * _world2local );
     SET_UNIFORM( "v2", osg::Uniform::FLOAT_VEC3, _node2._vertex * _world2local );
+#endif
 
     SET_UNIFORM( "t0", osg::Uniform::FLOAT_VEC2, t0 );
     SET_UNIFORM( "t1", osg::Uniform::FLOAT_VEC2, t1 );
@@ -323,9 +327,11 @@ AMRGeometry::drawImplementation( osg::RenderInfo& renderInfo ) const
             // apply the primitive's state changes:
             state.apply( dtemplate->_stateSet.get() );
 
+#ifndef NO_LOCALIZE
             osg::ref_ptr<osg::RefMatrix> rm = new osg::RefMatrix( dtemplate->_local2world * modelView );
             state.applyModelViewMatrix( rm.get() );
             state.applyModelViewAndProjectionUniformsIfRequired();
+#endif
 
             // render the pattern (a collection of primitive sets)
             for( Pattern::const_iterator p = _pattern.begin(); p != _pattern.end(); ++p )

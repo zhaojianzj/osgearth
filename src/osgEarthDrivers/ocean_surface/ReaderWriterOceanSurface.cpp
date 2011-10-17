@@ -22,6 +22,7 @@
 #include <osgDB/FileUtils>
 #include <osgEarth/Registry>
 #include <osgEarth/ThreadingUtils>
+#include <osgEarthDrivers/tms/TMSOptions>
 
 #include "OceanSurface"
 #include "DRoamNode"
@@ -52,7 +53,20 @@ struct ReaderWriterOceanSurface : public osgDB::ReaderWriter
         if ( !acceptsExtension(ext) )
             return ReadResult::FILE_NOT_HANDLED;
 
-        return new DRoamNode();
+        Map*        map       = 0L;
+        ImageLayer* maskLayer = 0L;
+
+        if ( options )
+        {
+            map       = static_cast<Map*>( const_cast<void*>(options->getPluginData("osgEarth::Map")) );
+            //maskLayer = static_cast<ImageLayer*>( const_cast<void*>(options->getPluginData("osgEarth::ImageLayer")) );
+        }
+
+        TMSOptions mask_o;
+        mask_o.url() = "http://readymap.org/readymap/tiles/1.0.0/2/";
+        maskLayer = new ImageLayer( "ocean mask", mask_o );
+
+        return new DRoamNode( map, maskLayer );
     }
 };
 

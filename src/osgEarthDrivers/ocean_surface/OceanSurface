@@ -19,9 +19,12 @@
 #ifndef OSGEARTH_DRIVER_OCEAN_SURFACE
 #define OSGEARTH_DRIVER_OCEAN_SURFACE 1
 
-#include <osgEarth/MapNode>
+#include <osgEarth/Map>
+#include <osgEarth/ImageLayer>
+#include <osg/Node>
+#include <osgDB/ReadFile>
+#include <osgDB/Options>
 
-#define LC "[OceanSurface] "
 
 namespace osgEarth { namespace Drivers {
 
@@ -35,6 +38,22 @@ namespace osgEarth { namespace Drivers {
     class /*header-only*/ OceanSurface
     {
     public:
+        /**
+         * Creates and returns a new node that renders the ocean surface.
+         */
+        static osg::Node* loadOceanSurface(
+            Map*                       map,
+            ImageLayer*                oceanMaskLayer,
+            const OceanSurfaceOptions& osOptions =OceanSurfaceOptions() )
+        {
+            osg::ref_ptr<osgDB::Options> options = new osgDB::Options();
+            options->setPluginData( "osgEarth::Map", (void*)map );
+            options->setPluginData( "osgEarth::ImageLayer", (void*)oceanMaskLayer );
+            options->setPluginData( "osgEarth::OceanSurfaceOptions", (void*)&osOptions );
+
+            osgDB::ReaderWriter::ReadResult r = osgDB::readNodeFile( ".ocean_surface", options.get() );
+            return r.takeNode();
+        }
     };
 
 } } // namespace osgEarth::Drivers

@@ -41,6 +41,7 @@ _cacheOnly( false ),
 _loadingWeight( 1.0f ),
 _exactCropping( false ),
 _enabled( true ),
+_active( true ),
 _reprojectedTileSize( 256 )
 
 {
@@ -60,6 +61,7 @@ ConfigOptions()
 void
 TerrainLayerOptions::setDefaults()
 {
+    _active.init( true );
     _enabled.init( true );
     _exactCropping.init( false );
     _reprojectedTileSize.init( 256 );
@@ -85,6 +87,7 @@ TerrainLayerOptions::getConfig() const
     conf.updateIfSet( "cache_only", _cacheOnly );
     conf.updateIfSet( "cache_format", _cacheFormat );
     conf.updateIfSet( "loading_weight", _loadingWeight );
+    conf.updateIfSet( "active", _active );
     conf.updateIfSet( "enabled", _enabled );
     conf.updateIfSet( "edge_buffer_ratio", _edgeBufferRatio);
     conf.updateObjIfSet( "profile", _profile );
@@ -110,6 +113,7 @@ TerrainLayerOptions::fromConfig( const Config& conf )
     conf.getIfSet( "cache_only", _cacheOnly );
     conf.getIfSet( "cache_format", _cacheFormat );
     conf.getIfSet( "loading_weight", _loadingWeight );
+    conf.getIfSet( "active", _active );
     conf.getIfSet( "enabled", _enabled );
     conf.getIfSet( "edge_buffer_ratio", _edgeBufferRatio);
     conf.getObjIfSet( "profile", _profile );

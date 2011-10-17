@@ -19,6 +19,10 @@
 #include "MeshManager"
 #include <osg/CullFace>
 #include <osg/Texture2D>
+#include <osgEarth/ImageToHeightFieldConverter>
+#include <osgEarth/URI>
+
+#define LC "[MeshManager] "
 
 // --------------------------------------------------------------------------
 
@@ -28,22 +32,40 @@ struct ImageRequest : public osgEarth::TaskRequest
 
     void operator()( ProgressCallback* progress )
     {
-        _result = _layer->createImage( _key );
+        _myResult = _layer->createImage( _key );
     }
 
     osg::ref_ptr<ImageLayer> _layer;
     TileKey _key;
-    GeoImage _result;
+    GeoImage _myResult;
+};
+
+struct ElevationRequest : public osgEarth::TaskRequest
+{
+    ElevationRequest( Map* map, const TileKey& key ) : _map(map), _key(key) { }
+
+    void operator()( ProgressCallback* progress )
+    {
+        osg::ref_ptr<osg::HeightField> hf;
+        _map->getHeightField( _key, true, hf, 0L, INTERP_AVERAGE, SAMPLE_FIRST_VALID, progress );
+        if ( hf.valid() )
+            _myResult = GeoHeightField( hf.get(), _key.getExtent(), _key.getProfile()->getVerticalSRS() );
+    }
+
+    osg::ref_ptr<Map> _map;
+    TileKey _key;
+    GeoHeightField _myResult;
 };
 
 // --------------------------------------------------------------------------
 
-MeshManager::MeshManager( Manifold* manifold, Map* map ) :
-_manifold( manifold ),
-_map( map ),
-_minGeomLevel( 1 ),
-_minActiveLevel( 0 ),
-_maxActiveLevel( MAX_ACTIVE_LEVEL ),
+MeshManager::MeshManager( Manifold* manifold, Map* map, ImageLayer* maskLayer ) :
+_manifold       ( manifold ),
+_map            ( map ),
+_maskLayer      ( maskLayer ),
+_minGeomLevel   ( 1 ),
+_minActiveLevel ( 0 ),
+_maxActiveLevel ( MAX_ACTIVE_LEVEL ),
 _maxJobsPerFrame( MAX_JOBS_PER_FRAME )
 {
     // fire up a task service to load textures.
@@ -54,10 +76,18 @@ _maxJobsPerFrame( MAX_JOBS_PER_FRAME )
 
     _amrGeode = new osg::Geode();
     _amrGeode->addDrawable( _amrGeom.get() );
-    _amrGeode->getOrCreateStateSet()->setAttributeAndModes( new osg::CullFace( osg::CullFace::BACK ), 1 );
+    //_amrGeode->getOrCreateStateSet()->setAttributeAndModes( new osg::CullFace( osg::CullFace::BACK ), 1 );
 
     // set up the manifold framework.
     manifold->initialize( this );
+
+    // the surface texture
+    osg::Image* surfaceImage = URI( "../data/oceanalpha.int" ).readImage();
+    _surfaceTex = new osg::Texture2D( surfaceImage );   
+    _surfaceTex->setFilter( osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR );
+    _surfaceTex->setFilter( osg::Texture::MAG_FILTER, osg::Texture::LINEAR );
+    _surfaceTex->setWrap( osg::Texture::WRAP_S, osg::Texture::REPEAT );
+    _surfaceTex->setWrap( osg::Texture::WRAP_T, osg::Texture::REPEAT ); 
 }
 
 NodeIndex
@@ -127,11 +157,30 @@ MeshManager::queueForImage( Diamond* d, float priority )
 {
     if ( !d->_queuedForImage && !d->_imageRequest.valid() )
     {
+#ifdef USE_WATER_MASK
+        d->_imageRequest = new ImageRequest( _maskLayer.get(), d->_key );
+#else
+        d->_imageRequest = new ElevationRequest( _map.get(), d->_key );
+#endif // USE_WATER_MASK
+        _imageService->add( d->_imageRequest.get() );
+        _imageQueue.push_back( DiamondJob( d, priority ) );
+        d->_queuedForImage = true;
+
+#if 0
+        //TEMP: grab the masking layer.
+        d->_imageRequest = new ImageRequest( _maskLayer.get(), d->_key );
+        _imageService->add( d->_imageRequest.get() );
+        _imageQueue.push_back( DiamondJob( d, priority ) );
+        d->_queuedForImage = true;
+#endif
+
+#if 0
         //OE_NOTICE << "REQ: " << d->_key->str() << " queueing request..." << std::endl;
         d->_imageRequest = new ImageRequest( _map->getImageLayerAt(0), d->_key );
         _imageService->add( d->_imageRequest.get() );
-        _imageQueue.push_back( DiamondJob( d, priority ) ); //.insert( DiamondJob( d, priority ) );
+        _imageQueue.push_back( DiamondJob( d, priority ) );
         d->_queuedForImage = true;
+#endif
     }
 }
 
@@ -149,6 +198,13 @@ outlineTexture( osg::Image* image )
         *((unsigned int*)image->data( 1, t )) = 0x00ff00ff;
         *((unsigned int*)image->data( image->s()-2, t )) = 0x00ff00ff;
     }
+}
+
+static
+float remap( float a, float a0, float a1, float r0, float r1 )
+{
+    float ratio = ( osg::clampBetween(a,a0,a1)-a0)/(a1-a0);
+    return r0 + ratio*(r1-r0);
 }
 
 void
@@ -236,25 +292,56 @@ MeshManager::update()
                 tex->setImage( createDebugImage() );
 
 #else
-
-                GeoImage* geoImage = dynamic_cast<GeoImage*>( d->_imageRequest->getResult() );
-                if ( geoImage )
+                
+                
+#ifdef USE_WATER_MASK
+                const GeoImage& geoImage =  dynamic_cast<ImageRequest*>(d->_imageRequest.get())->_myResult;
+                if ( geoImage.valid() )
                 {
                     tex = new osg::Texture2D();
-                    tex->setImage( geoImage->getImage() );
+                    tex->setImage( geoImage.getImage() );
                 }
+#else // USE_WATER_MASK 
+                const GeoHeightField& geoHF = dynamic_cast<ElevationRequest*>(d->_imageRequest.get())->_myResult;
+                if ( geoHF.valid() )
+                {
+                    const osg::HeightField* hf = geoHF.getHeightField();
+                    osg::Image* image = new osg::Image();
+                    image->allocateImage(hf->getNumColumns(), hf->getNumRows(), 1, GL_LUMINANCE, GL_UNSIGNED_SHORT);
+                    image->setInternalTextureFormat( GL_LUMINANCE16 );
+                    const osg::FloatArray* floats = hf->getFloatArray();
+                    for( unsigned int i = 0; i < floats->size(); ++i  ) {
+                        int col = i % hf->getNumColumns();
+                        int row = i / hf->getNumColumns();
+                        *(unsigned short*)image->data( col, row ) = (unsigned short)(32768 + (short)floats->at(i));
+                    }
+
+                    tex = new osg::Texture2D();
+                    tex->setImage( image );
+                    tex->setUnRefImageDataAfterApply( true );
+                }
+#endif // USE_WATER_MASK
 
 #endif // USE_DEBUG_TEXTURES
 
                 if ( tex )
                 {
+                    tex->setFilter( osg::Texture::MIN_FILTER, osg::Texture::NEAREST );
+                    tex->setFilter( osg::Texture::MAG_FILTER, osg::Texture::LINEAR );
+
                     tex->setWrap( osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE );
                     tex->setWrap( osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE );
-                    tex->setFilter( osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR );
-                    tex->setFilter( osg::Texture::MAG_FILTER, osg::Texture::LINEAR );
+                    //tex->setFilter( osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR );
+                    //tex->setFilter( osg::Texture::MAG_FILTER, osg::Texture::LINEAR );
                     d->_stateSet->setTextureAttributeAndModes( 0, tex, osg::StateAttribute::ON );
                     d->_stateSet->dirty(); // bump revision number so that users of this stateset can detect the change
                     d->_hasFinalImage = true;
+
+                    // temp:
+                    d->_stateSet->setTextureAttributeAndModes( 1, _surfaceTex.get(), osg::StateAttribute::ON ); 
+                    osg::Uniform* stUni = new osg::Uniform( osg::Uniform::SAMPLER_2D, "tex1" );
+                    stUni->set( 1 );
+                    d->_stateSet->addUniform( stUni );
 
 #ifdef OUTLINE_TEXTURES
 

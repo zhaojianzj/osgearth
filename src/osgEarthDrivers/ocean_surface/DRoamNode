@@ -25,6 +25,8 @@
 #include <osg/NodeVisitor>
 #include <osgEarth/Map>
 
+using namespace osgEarth;
+
 /**
  * D-ROAM: A diamond-based continuous manifold terrain engine.
  *
@@ -60,7 +62,7 @@
 class DRoamNode : public osg::CoordinateSystemNode
 {
 public:
-    DRoamNode( Map* map =0L );
+    DRoamNode( Map* map =0L, ImageLayer* maskLayer =0L );
     DRoamNode( const DRoamNode& rhs, const osg::CopyOp& op =osg::CopyOp::DEEP_COPY_ALL );
     META_Node(osgEarth,DRoamNode);
 
@@ -68,7 +70,8 @@ private:
     osg::ref_ptr<osg::Geode>          _geode;
     osg::ref_ptr<Manifold>            _manifold;
     osg::ref_ptr<MeshManager>         _mesh;
-    osg::ref_ptr<osgEarth::Map>       _map;
+    osg::ref_ptr<Map>                 _map;
+    osg::ref_ptr<ImageLayer>          _maskLayer;
 
 private:
     void update( osg::NodeVisitor* nv );

@@ -196,7 +196,7 @@ TileBuilder::createJob( const TileKey& key, Threading::MultiEvent& semaphore )
     for( ImageLayerVector::const_iterator i = job->_mapf.imageLayers().begin(); i != job->_mapf.imageLayers().end(); ++i )
     {
         ImageLayer* layer = i->get();
-        if ( layer->isKeyValid(key) )
+        if ( layer->isActive() && layer->isKeyValid(key) )
         {
             ParallelTask<BuildColorLayer>* j = new ParallelTask<BuildColorLayer>( &semaphore );
             j->init( key, layer, job->_mapf.getMapInfo(), _terrainOptions, job->_repo );
@@ -261,7 +261,9 @@ TileBuilder::finalizeJob(TileBuilder::Job*   job,
 
     for( ImageLayerVector::const_iterator i = job->_mapf.imageLayers().begin(); i != job->_mapf.imageLayers().end(); ++i )
     {
-        if ( !i->get()->isKeyValid(key) )
+        const ImageLayer* il = i->get();
+
+        if ( il->isActive() && !il->isKeyValid(key) )
         {
             if ( !emptyImage.valid() )
                 emptyImage = ImageUtils::createEmptyImage();
@@ -328,11 +330,15 @@ TileBuilder::createTile(const TileKey&      key,
 
         for( ImageLayerVector::const_iterator i = mapf.imageLayers().begin(); i != mapf.imageLayers().end(); ++i )
         {
-            if ( i->get()->isKeyValid( key ) )
-                ++jobCount;
+            ImageLayer* layer = i->get();
+            if ( layer->isActive() )
+            {
+                if ( layer->isKeyValid( key ) )
+                    ++jobCount;
 
-            if ( i->get()->getImageLayerOptions().lodBlending() == true )
-                out_hasLodBlendedLayers = true;
+                if ( layer->getImageLayerOptions().lodBlending() == true )
+                    out_hasLodBlendedLayers = true;
+            }
         }
 
         if ( mapf.elevationLayers().size() > 0 )
@@ -345,7 +351,7 @@ TileBuilder::createTile(const TileKey&      key,
         for( ImageLayerVector::const_iterator i = mapf.imageLayers().begin(); i != mapf.imageLayers().end(); ++i )
         {
             ImageLayer* layer = i->get();
-            if ( layer->isKeyValid(key) )
+            if ( layer->isActive() && layer->isKeyValid(key) )
             {
                 ParallelTask<BuildColorLayer>* j = new ParallelTask<BuildColorLayer>( &semaphore );
                 j->init( key, layer, mapInfo, _terrainOptions, repo );
@@ -381,15 +387,18 @@ TileBuilder::createTile(const TileKey&      key,
         for( ImageLayerVector::const_iterator i = mapf.imageLayers().begin(); i != mapf.imageLayers().end(); ++i )
         {
             ImageLayer* layer = i->get();
-            if ( layer->isKeyValid(key) )
+            if ( layer->isActive() )
             {
-                BuildColorLayer build;
-                build.init( key, layer, mapInfo, _terrainOptions, repo );
-                build.execute();
-            }
+                if ( layer->isKeyValid(key) )
+                {
+                    BuildColorLayer build;
+                    build.init( key, layer, mapInfo, _terrainOptions, repo );
+                    build.execute();
+                }
 
-            if ( layer->getImageLayerOptions().lodBlending() == true )
-                out_hasLodBlendedLayers = true;
+                if ( layer->getImageLayerOptions().lodBlending() == true )
+                    out_hasLodBlendedLayers = true;
+            }
         }
         
         // make an elevation layer.
@@ -420,7 +429,9 @@ TileBuilder::createTile(const TileKey&      key,
 
     for( ImageLayerVector::const_iterator i = mapf.imageLayers().begin(); i != mapf.imageLayers().end(); ++i )
     {
-        if ( !i->get()->isKeyValid(key) )
+        const ImageLayer* layer = i->get();
+
+        if ( layer->isActive() && !layer->isKeyValid(key) )
         {
             if ( !emptyImage.valid() )
                 emptyImage = ImageUtils::createEmptyImage();

@@ -90,10 +90,14 @@ namespace osgEarth
         optional<unsigned int>& maxDataLevel() { return _maxDataLevel; }
         const optional<unsigned int>& maxDataLevel() const { return _maxDataLevel; }
 
-
+        /**
+         * Whether this layer is active (i.e. whether the map loads its tiles at all)
+         */
+        optional<bool>& active() { return _active; }
+        const optional<bool>& active() const { return _active; }
 
 		/**
-		 * Whether to render this layer with the map.
+		 * Whether this layer is currently visible.
 		 */        
         optional<bool>& enabled() { return _enabled; }
         const optional<bool>& enabled() const { return _enabled; }
@@ -172,6 +176,7 @@ namespace osgEarth
         optional<float> _loadingWeight;
         optional<bool> _exactCropping;
 		optional<bool> _enabled;
+        optional<bool> _active;
 		optional<unsigned int> _reprojectedTileSize;
         optional<double> _edgeBufferRatio;
         optional<std::string> _cacheId;
@@ -208,7 +213,12 @@ namespace osgEarth
             return *_runtimeOptions; }
 
         /**
-         * Whether to draw this layer.
+         * Whether the layer is active (i.e. should be included in maps) 
+         */
+        bool isActive() const { return *_runtimeOptions->active(); }
+
+        /**
+         * Whether to draw this layer (i.e. visibility)
          */
         void setEnabled( bool value );
         bool getEnabled() const { return *_runtimeOptions->enabled(); }

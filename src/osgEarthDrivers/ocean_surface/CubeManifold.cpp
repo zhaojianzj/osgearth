@@ -335,10 +335,14 @@ toLonLatRad( const osg::Vec3d& coord, osg::Vec3d& out_lonLat )
         if ( !osgEarth::CubeUtils::faceCoordsToLatLon( 1.0-y, x, 4, lat, lon ) )
             OE_WARN << LC << "+Z: fc2ll failed" << std::endl;
     }
-    else //if ( coord.z() == -1.0 ) // negative Z ( -180 <= lon < 180, -90 <= lat <= -45 )
+    else if ( coord.z() == -1.0 ) // negative Z ( -180 <= lon < 180, -90 <= lat <= -45 )
     {
         if ( !osgEarth::CubeUtils::faceCoordsToLatLon( x, 1.0-y, 5, lat, lon ) )
             OE_WARN << LC << "-Z: fc2ll failed" << std::endl;
+    }
+    else
+    {
+        OE_WARN << LC << "shazbat!" << std::endl;
     }
 
     out_lonLat.x() = osg::DegreesToRadians( lon );

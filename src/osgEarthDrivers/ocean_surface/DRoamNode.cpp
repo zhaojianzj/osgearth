@@ -24,27 +24,37 @@
 #include <osg/Depth>
 #include <osg/PolygonOffset>
 
+using namespace osgEarth;
 using namespace osgEarth::Drivers;
 
-#undef USE_GEODETIC_MANIFOLD
-
-DRoamNode::DRoamNode( Map* map ) :
-_map( map )
+DRoamNode::DRoamNode( Map* map, ImageLayer* maskLayer ) :
+_map      ( map ),
+_maskLayer( maskLayer )
 {
     this->setCullCallback( new MyCullCallback );
     this->setUpdateCallback( new MyUpdateCallback );
 
-    // TODO: provide the ellipsoid in the ctor (like with MapNode->Map)
-    this->setCoordinateSystem( "EPSG:4326" );
-    this->setFormat( "WKT" );
-    this->setEllipsoidModel( new osg::EllipsoidModel );
+    //todo: do we really need all CSN stuff? (probably not)
+    if ( _map.valid() )
+    {
+        const SpatialReference* srs = _map->getProfile()->getSRS();
+        this->setCoordinateSystem( srs->getInitString() );
+        this->setCoordinateSystem( srs->getInitType() );
+        this->setEllipsoidModel  ( const_cast<osg::EllipsoidModel*>(srs->getEllipsoid()) );
+    }
+    else
+    {
+        this->setCoordinateSystem( "EPSG:4326" );
+        this->setFormat( "WKT" );
+        this->setEllipsoidModel( new osg::EllipsoidModel() );
+    }
 
 #ifdef USE_GEODETIC_MANIFOLD
     _manifold = new GeodeticManifold();
 #else
     _manifold = new CubeManifold();
 #endif
-    _mesh = new MeshManager( _manifold.get(), _map.get() );
+    _mesh = new MeshManager( _manifold.get(), _map.get(), _maskLayer.get() );
 
     _mesh->_maxActiveLevel = MAX_ACTIVE_LEVEL;
 
@@ -56,6 +66,9 @@ _map( map )
     sset->setMode( GL_LIGHTING, 0 );
     sset->setMode( GL_BLEND, 1 );
     sset->setMode( GL_CULL_FACE, 0 );
+
+    // trick to prevent z-fighting..
+    sset->setAttributeAndModes( new osg::Depth(osg::Depth::LEQUAL, 0.0, 1.0, false) );
     sset->setRenderBinDetails( 15, "RenderBin" ); //, "DepthSortedBin" );
 }
 
