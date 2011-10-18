@@ -21,6 +21,7 @@
 #include <osgEarth/ImageUtils>
 #include <osgEarth/Registry>
 #include <osgEarth/Cube>
+#include <osgEarth/TileKey>
 
 #include <osg/Notify>
 #include <osg/Timer>
@@ -1122,6 +1123,70 @@ osg::HeightField*
 GeoHeightField::takeHeightField()
 {
     return _heightField.release();
+}
+
+// --------------------------------------------------------------------------
+
+GeoHeightField
+GeoHeightField::mosaic( const std::vector<GeoHeightField>& inputs, const TileKey& key )
+{
+    osg::HeightField* mosaic = 0L;
+    const VerticalSpatialReference* vsrs = key.getProfile()->getVerticalSRS();
+
+    if ( inputs.size() > 0 )
+    {		
+        unsigned width = 0;
+        unsigned height = 0;
+
+        for (GeoHeightFieldVector::const_iterator itr = inputs.begin(); itr != inputs.end(); ++itr)
+        {
+            if (itr->getHeightField()->getNumColumns() > width)
+                width = itr->getHeightField()->getNumColumns();
+            if (itr->getHeightField()->getNumRows() > height) 
+                height = itr->getHeightField()->getNumRows();
+        }
+
+        mosaic = new osg::HeightField();
+        mosaic->allocate( width, height );
+
+        //Go ahead and set up the heightfield so we don't have to worry about it later
+        double minx, miny, maxx, maxy;
+        key.getExtent().getBounds(minx, miny, maxx, maxy);
+        double dx = (maxx - minx)/(double)(width-1);
+        double dy = (maxy - miny)/(double)(height-1);
+
+        //Create the new heightfield by sampling all of them.
+        for (unsigned int c = 0; c < width; ++c)
+        {
+            double geoX = minx + (dx * (double)c);
+            for (unsigned r = 0; r < height; ++r)
+            {
+                double geoY = miny + (dy * (double)r);
+
+                //For each sample point, try each heightfield.  The first one with a valid elevation wins.
+                float elevation = NO_DATA_VALUE;
+                for (GeoHeightFieldVector::const_iterator itr = inputs.begin(); itr != inputs.end(); ++itr)
+                {
+                    float e = 0.0;
+                    if (itr->getElevation(key.getExtent().getSRS(), geoX, geoY, INTERP_BILINEAR, vsrs, e))
+                    {
+                        elevation = e;
+                        break;
+                    }
+                }
+                mosaic->setHeight( c, r, elevation );                
+            }
+        }
+    }
+
+    if ( mosaic )
+    {
+        return GeoHeightField( mosaic, key.getExtent(), vsrs );
+    }
+    else
+    {
+        return GeoHeightField::INVALID;
+    }
 }
 
 // --------------------------------------------------------------------------

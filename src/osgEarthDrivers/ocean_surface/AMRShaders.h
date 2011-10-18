@@ -182,11 +182,6 @@ static char source_vertShaderMain_latLonMethod[] =
 "   texCoord0 = t0*u + t1*v + t2*w; \n"
 "} \n";
 
-
-
-
-
-
 static char source_vertShaderMain_flatMethod[] =
 
 "uniform vec3 v0, v1, v2; \n"
@@ -324,7 +319,7 @@ static char source_vertShaderMain_geocentricMethod[] =
 "   vec4 outVert4 = vec4( normalize(outVert3) * h, gl_Vertex.w ); \n"
 "   gl_Position = gl_ModelViewProjectionMatrix * outVert4; \n"
 "\n"
-"   // set up the tex coords for the frad shader: \n"
+"   // set up the tex coords for the frag shader: \n"
 "   u = gl_MultiTexCoord0.s; \n"
 "   v = gl_MultiTexCoord0.t; \n"
 "   w = 1.0 - u - v; \n"
@@ -360,13 +355,20 @@ char source_fragShaderMain[] =
 
 "varying vec2 texCoord0; \n"
 "uniform sampler2D tex0, tex1; \n"
+"uniform float osg_FrameTime; \n"
 "\n"
 "void main (void) \n"
 "{ \n"
-"    vec3 baseColor = vec3( 0.1, 0.3, 0.5 ); \n"
-"    float elev = (v_enorm * 65535.0) - 32768.0; \n"
-"    float a = remap(elev, -2000.0, -25.0, 0.75, 0.0 ); \n"
-"    gl_FragColor = vec4( 0, 0, 1, a ); \n"
+"    vec3 baseColor = vec3( 0.25, 0.35, 0.6 ); \n"
+//"    vec3 baseColor = vec3( 0.15, 0.20, 0.30 ); \n"
+"    float elev = (v_enorm * 65535.0) - 32768.0; \n"                  
+"    float elevEffect = remap( elev, -50.0, -10.0, 1.0, 0.0 ); \n" 
+"    float rangeFactor = remap( v_elevation, -10000, 10000, 10.0, 1.0 ); \n"
+"    float rangeEffect = remap( v_range, 75000, 200000 * rangeFactor, 1.0, 0.0 ); \n"
+"    float texBalance = remap( v_range, 7500, 15000, 0.0, 1.0 ); \n"
+"    float texIntensity = texture2D( tex1, texCoord0 ).r; \n"
+"    float texEffect = mix( texIntensity, 0.8, texBalance ); \n"
+"    gl_FragColor = vec4( baseColor, texEffect * elevEffect * rangeEffect); \n"
 "} \n";
 
 #endif // USE_IMAGE_MASK

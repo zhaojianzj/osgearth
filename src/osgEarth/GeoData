@@ -31,6 +31,8 @@
 
 namespace osgEarth
 {
+    class TileKey;
+
     /**
      * An "anonymous" bounding extent (i.e., no geo reference information)
      */
@@ -402,6 +404,10 @@ namespace osgEarth
          * Gets a pointer to the underlying OSG heightfield, and releases the internal reference.
          */
         osg::HeightField* takeHeightField();
+
+    public: // statics
+
+        static GeoHeightField mosaic( const std::vector<GeoHeightField>& inputs, const TileKey& key );
 
     protected:
         osg::ref_ptr<osg::HeightField> _heightField;

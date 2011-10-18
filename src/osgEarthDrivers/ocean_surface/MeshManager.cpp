@@ -46,10 +46,25 @@ struct ElevationRequest : public osgEarth::TaskRequest
 
     void operator()( ProgressCallback* progress )
     {
-        osg::ref_ptr<osg::HeightField> hf;
-        _map->getHeightField( _key, true, hf, 0L, INTERP_AVERAGE, SAMPLE_FIRST_VALID, progress );
-        if ( hf.valid() )
-            _myResult = GeoHeightField( hf.get(), _key.getExtent(), _key.getProfile()->getVerticalSRS() );
+        std::vector<TileKey> newkeys;
+        _map->getProfile()->getIntersectingTiles( _key, newkeys );
+
+        std::vector<GeoHeightField> fields;
+        for( std::vector<TileKey>::const_iterator i = newkeys.begin(); i != newkeys.end(); ++i )
+        {
+            osg::ref_ptr<osg::HeightField> hf;
+            if ( _map->getHeightField( *i, true, hf, 0L ) )
+            {
+                fields.push_back( GeoHeightField( hf.get(), i->getExtent(), i->getProfile()->getVerticalSRS() ) );
+            }
+        }
+
+        _myResult = GeoHeightField::mosaic( fields, _key );
+
+        //osg::ref_ptr<osg::HeightField> hf;
+        //_map->getHeightField( _key, true, hf, 0L, INTERP_AVERAGE, SAMPLE_FIRST_VALID, progress );
+        //if ( hf.valid() )
+        //    _myResult = GeoHeightField( hf.get(), _key.getExtent(), _key.getProfile()->getVerticalSRS() );
     }
 
     osg::ref_ptr<Map> _map;
@@ -178,10 +193,18 @@ MeshManager::queueForImage( Diamond* d, float priority )
             _imageQueue.push_back( DiamondJob( d, priority ) );
             d->_queuedForImage = true;
         }
-
+#if 0
         else if ( _bathyLayer.valid() )
         {
             d->_imageRequest = new ElevationLayerRequest( _bathyLayer.get(), d->_key );
+            _imageService->add( d->_imageRequest.get() );
+            _imageQueue.push_back( DiamondJob( d, priority ) );
+            d->_queuedForImage = true;
+        }
+#endif
+        else if ( _map.valid() )
+        {
+            d->_imageRequest = new ElevationRequest( _map.get(), d->_key );
             _imageService->add( d->_imageRequest.get() );
             _imageQueue.push_back( DiamondJob( d, priority ) );
             d->_queuedForImage = true;
@@ -333,11 +356,35 @@ MeshManager::update()
                     }
                 }
 
+#if 0
                 else if ( _bathyLayer.valid() )
                 {
                     const osg::HeightField* hf = dynamic_cast<osg::HeightField*>( d->_imageRequest->getResult() );
                     if ( hf )
                     {
+                        osg::Image* image = new osg::Image();
+                        image->allocateImage(hf->getNumColumns(), hf->getNumRows(), 1, GL_LUMINANCE, GL_UNSIGNED_SHORT);
+                        image->setInternalTextureFormat( GL_LUMINANCE16 );
+                        const osg::FloatArray* floats = hf->getFloatArray();
+                        for( unsigned int i = 0; i < floats->size(); ++i  ) {
+                            int col = i % hf->getNumColumns();
+                            int row = i / hf->getNumColumns();
+                            *(unsigned short*)image->data( col, row ) = (unsigned short)(32768 + (short)floats->at(i));
+                        }
+
+                        tex = new osg::Texture2D();
+                        tex->setImage( image );
+                        tex->setUnRefImageDataAfterApply( true );
+                    }
+                }
+#endif
+
+                else if ( _map.valid() )
+                {
+                    GeoHeightField& ghf = dynamic_cast<ElevationRequest*>(d->_imageRequest.get())->_myResult;
+                    if ( ghf.getHeightField() )
+                    {
+                        osg::HeightField* hf = ghf.getHeightField();
                         osg::Image* image = new osg::Image();
                         image->allocateImage(hf->getNumColumns(), hf->getNumRows(), 1, GL_LUMINANCE, GL_UNSIGNED_SHORT);
                         image->setInternalTextureFormat( GL_LUMINANCE16 );
