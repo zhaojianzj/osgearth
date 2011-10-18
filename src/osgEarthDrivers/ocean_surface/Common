@@ -80,7 +80,13 @@ typedef int            TravNumber;     // mesh traversal number
 //#define  USE_LINEAR_INTERP 1
 //#define  USE_SLERP_INTERP 1    // NOTE: need to update this method to account for _local2world
 
+// whether to use an image mask or an elevation mask
+//#define USE_IMAGE_MASK 1
+
 // whether to use a water masking layer (versus sampling the elevation in the map)
 #define USE_WATER_MASK
+
+// whether to disable near/far clip plane computation on the droam mesh
+#define DISABLE_NEAR_FAR 1
 
 #endif // OSGEARTH_DROAM_ENGINE_COMMON_H

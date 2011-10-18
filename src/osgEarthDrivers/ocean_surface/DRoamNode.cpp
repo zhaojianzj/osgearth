@@ -27,12 +27,14 @@
 using namespace osgEarth;
 using namespace osgEarth::Drivers;
 
-DRoamNode::DRoamNode( Map* map, ImageLayer* maskLayer ) :
-_map      ( map ),
-_maskLayer( maskLayer )
+DRoamNode::DRoamNode( Map* map, ImageLayer* maskLayer, ElevationLayer* bathyLayer ) :
+_map       ( map ),
+_maskLayer ( maskLayer ),
+_bathyLayer( bathyLayer )
 {
-    this->setCullCallback( new MyCullCallback );
-    this->setUpdateCallback( new MyUpdateCallback );
+    //this->setCullCallback( new MyCullCallback );
+    //this->setUpdateCallback( new MyUpdateCallback );
+    this->setNumChildrenRequiringUpdateTraversal( 1 );
 
     //todo: do we really need all CSN stuff? (probably not)
     if ( _map.valid() )
@@ -54,7 +56,7 @@ _maskLayer( maskLayer )
 #else
     _manifold = new CubeManifold();
 #endif
-    _mesh = new MeshManager( _manifold.get(), _map.get(), _maskLayer.get() );
+    _mesh = new MeshManager( _manifold.get(), _map.get(), _maskLayer.get(), _bathyLayer.get() );
 
     _mesh->_maxActiveLevel = MAX_ACTIVE_LEVEL;
 
@@ -79,6 +81,7 @@ _manifold( rhs._manifold.get() )
     //nop
 }
 
+#if 0
 void
 DRoamNode::cull( osg::NodeVisitor* nv )
 {
@@ -105,4 +108,45 @@ void
 DRoamNode::update( osg::NodeVisitor* nv )
 {
     _mesh->update();
+}
+#endif
+
+void
+DRoamNode::traverse( osg::NodeVisitor& nv )
+{
+    if ( nv.getVisitorType() == osg::NodeVisitor::CULL_VISITOR )
+    {
+        osgUtil::CullVisitor* cv = static_cast<osgUtil::CullVisitor*>( &nv );
+
+        _mesh->_amrDrawList.clear();
+
+        _manifold->cull( cv );
+
+        // I know is not strictly kosher to modify the scene graph from the CULL traversal. But
+        // we need frame-coherence, and both the Geode and all Geometry's are marked with DYNAMIC
+        // data variance .. so hopefully this is safe.
+        _mesh->_amrGeom->setDrawList( _mesh->_amrDrawList );
+        _mesh->_amrGeode->dirtyBound();
+
+        //cv->addDrawable( _mesh->_amrGeom.get(), cv->getModelViewMatrix() );
+
+#ifdef DISABLE_NEAR_FAR
+        osg::CullSettings::ComputeNearFarMode saveMode = cv->getComputeNearFarMode();
+        cv->setComputeNearFarMode( osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR );
+#endif
+
+        osg::Group::traverse( nv );
+
+#ifdef DISABLE_NEAR_FAR
+        cv->setComputeNearFarMode( saveMode );
+#endif
+    }
+    else
+    {
+        if ( nv.getVisitorType() == osg::NodeVisitor::UPDATE_VISITOR )
+        {
+            _mesh->update();
+        }
+        osg::Group::traverse( nv );
+    }
 }

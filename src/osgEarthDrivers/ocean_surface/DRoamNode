@@ -62,9 +62,11 @@ using namespace osgEarth;
 class DRoamNode : public osg::CoordinateSystemNode
 {
 public:
-    DRoamNode( Map* map =0L, ImageLayer* maskLayer =0L );
+    DRoamNode( Map* map =0L, ImageLayer* maskLayer =0L, ElevationLayer* bathyLayer =0L );
     DRoamNode( const DRoamNode& rhs, const osg::CopyOp& op =osg::CopyOp::DEEP_COPY_ALL );
     META_Node(osgEarth,DRoamNode);
+
+    virtual void traverse(osg::NodeVisitor& nv);
 
 private:
     osg::ref_ptr<osg::Geode>          _geode;
@@ -72,7 +74,9 @@ private:
     osg::ref_ptr<MeshManager>         _mesh;
     osg::ref_ptr<Map>                 _map;
     osg::ref_ptr<ImageLayer>          _maskLayer;
+    osg::ref_ptr<ElevationLayer>      _bathyLayer;
 
+#if 0
 private:
     void update( osg::NodeVisitor* nv );
     void cull( osg::NodeVisitor* nv );
@@ -92,6 +96,7 @@ private:
         }
     };
     friend struct MyUpdateCallback;
+#endif
 };
 
 #endif // OSGEARTH_ENGINE_DROAM_MAPNODE_H

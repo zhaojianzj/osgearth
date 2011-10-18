@@ -21,6 +21,8 @@
 
 #include <osgEarthUtil/Common>
 #include <osgEarth/MapNode>
+#include <osgEarth/ThreadingUtils>
+#include <osgEarth/Utils>
 #include <osgGA/GUIEventHandler>
 #include <osgGA/EventVisitor>
 
@@ -85,6 +87,20 @@ namespace osgEarth { namespace Util
 
         osg::ref_ptr<AutoClipPlaneHandler> _handler;
     };
+
+    struct OSGEARTHUTIL_EXPORT AutoClipPlaneCallback2 : public osg::NodeCallback
+    {
+        AutoClipPlaneCallback2( const Map* map =0L );
+        virtual void operator()( osg::Node* node, osg::NodeVisitor* nv );
+        
+        bool   _geocentric;
+        double _minNearFarRatio, _maxNearFarRatio;
+        double _rp;
+        bool   _autoFarPlaneClipping;
+        Threading::PerObjectMap< osg::View*, osg::ref_ptr<osg::CullSettings::ClampProjectionMatrixCallback> > _clampers;
+    };
+
+
 
 } } // namespace osgEarth::Util
 

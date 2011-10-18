@@ -53,8 +53,9 @@ struct ReaderWriterOceanSurface : public osgDB::ReaderWriter
         if ( !acceptsExtension(ext) )
             return ReadResult::FILE_NOT_HANDLED;
 
-        Map*        map       = 0L;
-        ImageLayer* maskLayer = 0L;
+        Map*            map        = 0L;
+        ImageLayer*     maskLayer  = 0L;
+        ElevationLayer* bathyLayer = 0L;
 
         if ( options )
         {
@@ -62,11 +63,17 @@ struct ReaderWriterOceanSurface : public osgDB::ReaderWriter
             //maskLayer = static_cast<ImageLayer*>( const_cast<void*>(options->getPluginData("osgEarth::ImageLayer")) );
         }
 
+#ifdef USE_IMAGE_MASK
         TMSOptions mask_o;
         mask_o.url() = "http://readymap.org/readymap/tiles/1.0.0/2/";
         maskLayer = new ImageLayer( "ocean mask", mask_o );
+#else
+        TMSOptions bathy_o;
+        bathy_o.url() = "http://readymap.org/readymap/tiles/1.0.0/9/";
+        bathyLayer = new ElevationLayer( "bathymetry", bathy_o );
+#endif
 
-        return new DRoamNode( map, maskLayer );
+        return new DRoamNode( map, maskLayer, bathyLayer );
     }
 };
 

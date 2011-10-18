@@ -182,10 +182,42 @@ static char source_vertShaderMain_latLonMethod[] =
 "   texCoord0 = t0*u + t1*v + t2*w; \n"
 "} \n";
 
+
+
+
+
+
+static char source_vertShaderMain_flatMethod[] =
+
+"uniform vec3 v0, v1, v2; \n"
+"uniform vec2 t0, t1, t2; \n"
+"varying vec2 texCoord0; \n"
+"\n"
+"void main (void) \n"
+"{ \n"
+"   // interpolate vert form barycentric coords \n"
+"   float u = gl_Vertex.x; \n"
+"   float v = gl_Vertex.y; \n"
+"   float w = gl_Vertex.z; // 1-u-v  \n"
+"   vec4 outVert4 = vec4( v0*u + v1*v + v2*w, gl_Vertex.w); \n"
+"   gl_Position = gl_ModelViewProjectionMatrix * outVert4; \n"
+"\n"
+"   // set up the tex coords for the frad shader: \n"
+"   u = gl_MultiTexCoord0.s; \n"
+"   v = gl_MultiTexCoord0.t; \n"
+"   w = 1.0 - u - v; \n"
+"   texCoord0 = t0*u + t1*v + t2*w; \n"
+"} \n";
+
+// --------------------------------------------------------------------------
+
+#ifdef USE_IMAGE_MASK
+
+// The mask-based approach:
+
 static char source_vertShaderMain_geocentricMethod[] =
 
 "uniform sampler2D tex0; \n"
-//"varying float eratio; \n"
 "uniform mat4 osg_ViewMatrixInverse; \n"
 
 "varying float v_maskValue; \n"
@@ -213,7 +245,6 @@ static char source_vertShaderMain_geocentricMethod[] =
 "   w = 1.0 - u - v; \n"
 "   texCoord0 = t0*u + t1*v + t2*w; \n"
 
-//"   eratio = texture2D( tex0, texCoord0 ).r; \n"
 "   v_maskValue  = texture2D( tex0, texCoord0 ).a; \n"
 
 // scale the texture mapping....
@@ -227,7 +258,56 @@ static char source_vertShaderMain_geocentricMethod[] =
 "   v_range = distance(outVert3, gl_ModelViewMatrixInverse[3]); \n"
 "} \n";
 
-static char source_vertShaderMain_flatMethod[] =
+char source_fragShaderMain[] = 
+
+"float remap( float val, float vmin, float vmax, float r0, float r1 ) \n"
+"{ \n"
+"    float vr = (clamp(val, vmin, vmax)-vmin)/(vmax-vmin); \n"
+"    return r0 + vr * (r1-r0); \n"
+"} \n"
+
+"varying float v_maskValue; \n"
+"varying float v_elevation; \n"
+"varying float v_range; \n"
+
+"varying vec2 texCoord0; \n"
+"uniform sampler2D tex0, tex1; \n"
+"\n"
+"void main (void) \n"
+"{ \n"
+"    vec3 baseColor = vec3( 0.1, 0.3, 0.5 ); \n"
+
+"    float eMoney = remap( v_elevation, -10000, 10000, 10.0, 1.0 ); \n"
+
+// alpha based on camera range....
+"    v_maskValue = 1.0 - (1.0-v_maskValue)*(1.0-v_maskValue); \n"
+"    float rangeEffect = remap( v_range, 75000, 200000 * eMoney, 1.0, 0.0 ); \n"
+"    float maskEffect  = remap( v_maskValue, 0.0, 1.0, 0.0, 1.0 ); \n"
+
+#ifdef USE_TEXTURES
+"    float texAlpha = texture2D( tex1, texCoord0 ).r; \n"
+"    gl_FragColor = vec4( baseColor, texAlpha * maskEffect * rangeEffect); \n"
+#else
+"    gl_FragColor = vec4(.5, .5, 1.0, 0.5); \n"
+#endif
+"} \n";
+
+
+
+#else // !USE_IMAGE_MASK (use elevation mask)
+
+//------------------------------------------------------------------------
+// The elevation-based approach:
+
+static char source_vertShaderMain_geocentricMethod[] =
+
+"uniform sampler2D tex0; \n"
+"uniform mat4 osg_ViewMatrixInverse; \n"
+
+"varying float v_maskValue; \n"
+"varying float v_elevation; \n"
+"varying float v_range; \n"
+"varying float v_enorm; \n"
 
 "uniform vec3 v0, v1, v2; \n"
 "uniform vec2 t0, t1, t2; \n"
@@ -239,7 +319,9 @@ static char source_vertShaderMain_flatMethod[] =
 "   float u = gl_Vertex.x; \n"
 "   float v = gl_Vertex.y; \n"
 "   float w = gl_Vertex.z; // 1-u-v  \n"
-"   vec4 outVert4 = vec4( v0*u + v1*v + v2*w, gl_Vertex.w); \n"
+"   vec3 outVert3 = v0*u + v1*v + v2*w; \n"
+"   float h = length(v0)*u + length(v1)*v + length(v2)*w; // interpolate height \n" // ...oops, local space
+"   vec4 outVert4 = vec4( normalize(outVert3) * h, gl_Vertex.w ); \n"
 "   gl_Position = gl_ModelViewProjectionMatrix * outVert4; \n"
 "\n"
 "   // set up the tex coords for the frad shader: \n"
@@ -247,42 +329,21 @@ static char source_vertShaderMain_flatMethod[] =
 "   v = gl_MultiTexCoord0.t; \n"
 "   w = 1.0 - u - v; \n"
 "   texCoord0 = t0*u + t1*v + t2*w; \n"
+
+// elevation data (normalized)
+"   v_enorm     = texture2D( tex0, texCoord0 ).r; \n"
+
+// scale the texture mapping....
+"   texCoord0 *= 100.0; \n"
+
+// elevation...
+"   vec4 eye = osg_ViewMatrixInverse * vec4(0,0,0,1); \n"
+"   v_elevation = length(eye.xyz) - 6378137.0; \n"
+
+// range...
+"   v_range = distance(outVert3, gl_ModelViewMatrixInverse[3]); \n"
 "} \n";
 
-// --------------------------------------------------------------------------
-
-#if 0
-char source_fragShaderMain[] = 
-
-"float remap( float val, float vmin, float vmax, float r0, float r1 ) \n"
-"{ \n"
-"    float vr = (clamp(val, vmin, vmax)-vmin)/(vmax-vmin); \n"
-"    return r0 + vr * (r1-r0); \n"
-"} \n"
-
-"varying float eratio; \n"
-
-"varying vec2 texCoord0; \n"
-"uniform sampler2D tex0; \n"
-"\n"
-"void main (void) \n"
-"{ \n"
-#ifdef USE_TEXTURES
-"    float elev = (eratio * 65535.0) - 32768.0; \n"
-"    float b = 1.0; \n"
-//"    float b = remap(elev, -1000.0, 0.0, 1.0, 0.0 ); \n"
-"    float g = 0.0; \n"
-//"    float g = remap(elev, 0.0, 500.0, 0.0, 1.0 ); \n" // above msl
-//"    float g = remap(elev, -150.0, 0, 0.0, 1.0 ); \n"
-"    float a = remap(elev, -2000.0, 0.0, 0.5, 0.0 ); \n"
-"    gl_FragColor = vec4( 0, g, b, a ); \n"
-//"    gl_FragColor = vec4( 0, 0, 1, alpha ); \n"
-#else
-"    gl_FragColor = vec4(.5, .5, 1.0, 0.5); \n"
-#endif
-"} \n";
-
-#endif
 
 char source_fragShaderMain[] = 
 
@@ -295,7 +356,7 @@ char source_fragShaderMain[] =
 "varying float v_maskValue; \n"
 "varying float v_elevation; \n"
 "varying float v_range; \n"
-//"uniform mat4 osg_ViewMatrixInverse; \n"
+"varying float v_enorm; \n"
 
 "varying vec2 texCoord0; \n"
 "uniform sampler2D tex0, tex1; \n"
@@ -303,17 +364,9 @@ char source_fragShaderMain[] =
 "void main (void) \n"
 "{ \n"
 "    vec3 baseColor = vec3( 0.1, 0.3, 0.5 ); \n"
-
-"    float eMoney = remap( v_elevation, -10000, 10000, 10.0, 1.0 ); \n"
-
-// alpha based on camera range....
-"    float rangeEffect = remap( v_range, 75000, 200000 * eMoney, 1.0, 0.0 ); \n"
-"    float maskEffect  = remap( v_maskValue, 0.0, 1.0, 0.0, 1.0 ); \n"
-
-#ifdef USE_TEXTURES
-"    float texAlpha = texture2D( tex1, texCoord0 ).r; \n"
-"    gl_FragColor = vec4( baseColor, texAlpha * maskEffect * rangeEffect); \n"
-#else
-"    gl_FragColor = vec4(.5, .5, 1.0, 0.5); \n"
-#endif
+"    float elev = (v_enorm * 65535.0) - 32768.0; \n"
+"    float a = remap(elev, -2000.0, -25.0, 0.75, 0.0 ); \n"
+"    gl_FragColor = vec4( 0, 0, 1, a ); \n"
 "} \n";
+
+#endif // USE_IMAGE_MASK

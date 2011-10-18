@@ -72,7 +72,7 @@ class MeshManager : public osg::Referenced
 {
 public:
     /** Construct the manager that will manage the mesh for the specified manifold. */
-    MeshManager( Manifold* manifold, Map* map, ImageLayer* maskLayer );
+    MeshManager( Manifold* manifold, Map* map, ImageLayer* maskLayer, ElevationLayer* bathyLayer );
 
 public:
     /** Add a shared vertex (and its normal) to the mesh. */
@@ -104,6 +104,7 @@ public:
     osg::ref_ptr<Manifold>       _manifold;
     osg::ref_ptr<Map>            _map;
     osg::ref_ptr<ImageLayer>     _maskLayer;
+    osg::ref_ptr<ElevationLayer> _bathyLayer;
     osg::ref_ptr<osg::Texture2D> _surfaceTex;
 
     DiamondQueue         _dirtyQueue;        // queue for primitive set refresh jobs

@@ -57,12 +57,26 @@ struct ElevationRequest : public osgEarth::TaskRequest
     GeoHeightField _myResult;
 };
 
+struct ElevationLayerRequest : public osgEarth::TaskRequest
+{
+    ElevationLayerRequest( ElevationLayer* layer, const TileKey& key ) : _layer(layer), _key(key) { }
+
+    void operator()( ProgressCallback* progress )
+    {
+        _result = _layer->createHeightField( _key, progress );
+    }
+
+    osg::ref_ptr<ElevationLayer> _layer;
+    TileKey _key;
+};
+
 // --------------------------------------------------------------------------
 
-MeshManager::MeshManager( Manifold* manifold, Map* map, ImageLayer* maskLayer ) :
+MeshManager::MeshManager( Manifold* manifold, Map* map, ImageLayer* maskLayer, ElevationLayer* bathyLayer ) :
 _manifold       ( manifold ),
 _map            ( map ),
 _maskLayer      ( maskLayer ),
+_bathyLayer     ( bathyLayer ),
 _minGeomLevel   ( 1 ),
 _minActiveLevel ( 0 ),
 _maxActiveLevel ( MAX_ACTIVE_LEVEL ),
@@ -157,14 +171,30 @@ MeshManager::queueForImage( Diamond* d, float priority )
 {
     if ( !d->_queuedForImage && !d->_imageRequest.valid() )
     {
-#ifdef USE_WATER_MASK
-        d->_imageRequest = new ImageRequest( _maskLayer.get(), d->_key );
-#else
-        d->_imageRequest = new ElevationRequest( _map.get(), d->_key );
-#endif // USE_WATER_MASK
-        _imageService->add( d->_imageRequest.get() );
-        _imageQueue.push_back( DiamondJob( d, priority ) );
-        d->_queuedForImage = true;
+        if ( _maskLayer.valid() )
+        {
+            d->_imageRequest = new ImageRequest( _maskLayer.get(), d->_key );
+            _imageService->add( d->_imageRequest.get() );
+            _imageQueue.push_back( DiamondJob( d, priority ) );
+            d->_queuedForImage = true;
+        }
+
+        else if ( _bathyLayer.valid() )
+        {
+            d->_imageRequest = new ElevationLayerRequest( _bathyLayer.get(), d->_key );
+            _imageService->add( d->_imageRequest.get() );
+            _imageQueue.push_back( DiamondJob( d, priority ) );
+            d->_queuedForImage = true;
+        }
+
+//#ifdef USE_WATER_MASK
+//        d->_imageRequest = new ImageRequest( _maskLayer.get(), d->_key );
+//#else
+//        d->_imageRequest = new ElevationRequest( _map.get(), d->_key );
+//#endif // USE_WATER_MASK
+//        _imageService->add( d->_imageRequest.get() );
+//        _imageQueue.push_back( DiamondJob( d, priority ) );
+//        d->_queuedForImage = true;
 
 #if 0
         //TEMP: grab the masking layer.
@@ -292,35 +322,37 @@ MeshManager::update()
                 tex->setImage( createDebugImage() );
 
 #else
-                
-                
-#ifdef USE_WATER_MASK
-                const GeoImage& geoImage =  dynamic_cast<ImageRequest*>(d->_imageRequest.get())->_myResult;
-                if ( geoImage.valid() )
-                {
-                    tex = new osg::Texture2D();
-                    tex->setImage( geoImage.getImage() );
-                }
-#else // USE_WATER_MASK 
-                const GeoHeightField& geoHF = dynamic_cast<ElevationRequest*>(d->_imageRequest.get())->_myResult;
-                if ( geoHF.valid() )
-                {
-                    const osg::HeightField* hf = geoHF.getHeightField();
-                    osg::Image* image = new osg::Image();
-                    image->allocateImage(hf->getNumColumns(), hf->getNumRows(), 1, GL_LUMINANCE, GL_UNSIGNED_SHORT);
-                    image->setInternalTextureFormat( GL_LUMINANCE16 );
-                    const osg::FloatArray* floats = hf->getFloatArray();
-                    for( unsigned int i = 0; i < floats->size(); ++i  ) {
-                        int col = i % hf->getNumColumns();
-                        int row = i / hf->getNumColumns();
-                        *(unsigned short*)image->data( col, row ) = (unsigned short)(32768 + (short)floats->at(i));
-                    }
 
-                    tex = new osg::Texture2D();
-                    tex->setImage( image );
-                    tex->setUnRefImageDataAfterApply( true );
+                if ( _maskLayer.valid() )
+                {
+                    const GeoImage& geoImage =  dynamic_cast<ImageRequest*>(d->_imageRequest.get())->_myResult;
+                    if ( geoImage.valid() )
+                    {
+                        tex = new osg::Texture2D();
+                        tex->setImage( geoImage.getImage() );
+                    }
                 }
-#endif // USE_WATER_MASK
+
+                else if ( _bathyLayer.valid() )
+                {
+                    const osg::HeightField* hf = dynamic_cast<osg::HeightField*>( d->_imageRequest->getResult() );
+                    if ( hf )
+                    {
+                        osg::Image* image = new osg::Image();
+                        image->allocateImage(hf->getNumColumns(), hf->getNumRows(), 1, GL_LUMINANCE, GL_UNSIGNED_SHORT);
+                        image->setInternalTextureFormat( GL_LUMINANCE16 );
+                        const osg::FloatArray* floats = hf->getFloatArray();
+                        for( unsigned int i = 0; i < floats->size(); ++i  ) {
+                            int col = i % hf->getNumColumns();
+                            int row = i / hf->getNumColumns();
+                            *(unsigned short*)image->data( col, row ) = (unsigned short)(32768 + (short)floats->at(i));
+                        }
+
+                        tex = new osg::Texture2D();
+                        tex->setImage( image );
+                        tex->setUnRefImageDataAfterApply( true );
+                    }
+                }
 
 #endif // USE_DEBUG_TEXTURES
 

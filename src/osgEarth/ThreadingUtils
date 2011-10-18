@@ -309,6 +309,25 @@ namespace osgEarth { namespace Threading
         std::map<OpenThreads::Thread*,T> _data;
         OpenThreads::Mutex               _mutex;
     };
+    
+
+    
+    /** Template for thread safe per-object data storage */
+    template<typename KEY, typename DATA>
+    struct PerObjectMap
+    {
+        DATA& get(KEY k) {
+            osgEarth::Threading::ScopedMutexLock lock(_mutex);
+            return _data[k];
+        }
+        const DATA& get(KEY k) const {
+            osgEarth::Threading::ScopedMutexLock lock(_mutex);
+            return _data[k];
+        }
+    private:
+        std::map<KEY,DATA>  _data;
+        osgEarth::Threading::Mutex  _mutex;
+    };
 
 } } // namepsace osgEarth::Threading
 

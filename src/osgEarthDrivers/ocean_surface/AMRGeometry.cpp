@@ -267,7 +267,7 @@ AMRGeometry::initPatterns()
     for( int r=1; r<AMR_PATCH_ROWS; ++r )
     {
         rowptr += r;
-        osg::DrawElementsUShort* e = new osg::DrawElementsUShort( GL_TRIANGLE_STRIP );
+        osg::DrawElementsUInt* e = new osg::DrawElementsUInt( GL_TRIANGLE_STRIP );
         e->setElementBufferObject( _patternEBO.get() );            
 
         for( int c=0; c<=r; ++c )

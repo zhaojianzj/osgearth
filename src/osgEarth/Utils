@@ -392,7 +392,6 @@ namespace osgEarth
     private:
         vector_type _impl;
     };
-
 }
 
 #endif // OSGEARTH_UTILS_H

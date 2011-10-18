@@ -57,6 +57,16 @@ usage( const std::string& msg )
     return -1;
 }
 
+struct PrintMe : public osg::NodeCallback {
+    void operator()(osg::Node* node, osg::NodeVisitor* nv) {
+        traverse(node,nv);
+        osgUtil::CullVisitor* cv = static_cast<osgUtil::CullVisitor*>(nv);
+        double n, f, a, v;
+        cv->getProjectionMatrix()->getPerspective(v, a, n, f);
+        OE_NOTICE << std::fixed << "near = " << n << ", far = " << f << ", ratio = " << n/f << std::endl;
+    }
+};
+
 static EarthManipulator* s_manip         =0L;
 static Control*          s_controlPanel  =0L;
 static SkyNode*          s_sky           =0L;
@@ -372,9 +382,9 @@ main(int argc, char** argv)
             // planes based on your view of the horizon. This prevents near clipping issues
             // when you are very close to the ground. If your app never brings a user very
             // close to the ground, you may not need this.
-            if ( useSky || useAutoClip )
+            if ( useAutoClip )
             {
-                viewer.getCamera()->addEventCallback( new AutoClipPlaneCallback() );
+                viewer.getCamera()->addEventCallback( new AutoClipPlaneCallback2() );
             }
         }
 
@@ -433,6 +443,8 @@ main(int argc, char** argv)
     viewer.addEventHandler(new osgViewer::ThreadingHandler());
     viewer.addEventHandler(new osgViewer::LODScaleHandler());
     viewer.addEventHandler(new osgGA::StateSetManipulator(viewer.getCamera()->getOrCreateStateSet()));
+
+    viewer.getCamera()->setCullCallback( new PrintMe() );
 
     return viewer.run();
 }
