@@ -27,16 +27,15 @@
 using namespace osgEarth;
 using namespace osgEarth::Drivers;
 
-DRoamNode::DRoamNode( Map* map, ImageLayer* maskLayer, ElevationLayer* bathyLayer ) :
+DRoamNode::DRoamNode( Map* map, const OceanSurfaceOptions& options ) :
 _map       ( map ),
-_maskLayer ( maskLayer ),
-_bathyLayer( bathyLayer )
+_options   ( options )
 {
     this->setNumChildrenRequiringUpdateTraversal( 1 );
 
     _manifold = new CubeManifold();
 
-    _mesh = new MeshManager( _manifold.get(), _map.get(), _maskLayer.get(), _bathyLayer.get() );
+    _mesh = new MeshManager( _manifold.get(), _map.get(), _options, _maskLayer.get(), _bathyLayer.get() );
 
     _mesh->_maxActiveLevel = MAX_ACTIVE_LEVEL;
 
@@ -52,6 +51,12 @@ _bathyLayer( bathyLayer )
     // trick to prevent z-fighting..
     sset->setAttributeAndModes( new osg::Depth(osg::Depth::LEQUAL, 0.0, 1.0, false) );
     sset->setRenderBinDetails( 15, "RenderBin" ); //, "DepthSortedBin" );
+}
+
+void
+DRoamNode::apply( const OceanSurfaceOptions& options )
+{
+    _mesh->apply( options );
 }
 
 void

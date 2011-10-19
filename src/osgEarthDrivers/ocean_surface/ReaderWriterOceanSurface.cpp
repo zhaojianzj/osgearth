@@ -22,7 +22,6 @@
 #include <osgDB/FileUtils>
 #include <osgEarth/Registry>
 #include <osgEarth/ThreadingUtils>
-#include <osgEarthDrivers/tms/TMSOptions>
 
 #include "OceanSurface"
 #include "DRoamNode"
@@ -53,19 +52,34 @@ struct ReaderWriterOceanSurface : public osgDB::ReaderWriter
         if ( !acceptsExtension(ext) )
             return ReadResult::FILE_NOT_HANDLED;
 
-        Map*            map        = 0L;
-        ImageLayer*     maskLayer  = 0L;
-        ElevationLayer* bathyLayer = 0L;
+        MapNode*             mapNode    = 0L;
+        ImageLayer*          maskLayer  = 0L;
+        ElevationLayer*      bathyLayer = 0L;
+        OceanSurfaceOptions* osOptions  = 0L;
 
         if ( options )
         {
-            map        = static_cast<Map*>( const_cast<void*>(options->getPluginData("map")) );
-            maskLayer  = static_cast<ImageLayer*>( const_cast<void*>(options->getPluginData("mask_layer")) );
-            bathyLayer = static_cast<ElevationLayer*>( const_cast<void*>(options->getPluginData("bathy_layer")) );
+            mapNode    = static_cast<MapNode*>( const_cast<void*>(options->getPluginData("mapNode")) );
+            osOptions  = static_cast<OceanSurfaceOptions*>( const_cast<void*>(options->getPluginData("options")) );
         }
 
-        return new DRoamNode( map, maskLayer, bathyLayer );
+        if ( !mapNode )
+            return ReadResult::ERROR_IN_READING_FILE;
+
+        osg::observer_ptr<DRoamNode>& node = const_cast<ReaderWriterOceanSurface*>(this)->_oceans.get(mapNode);
+        if ( !node.valid() )
+        {
+            node = new DRoamNode( mapNode->getMap(), osOptions? *osOptions : OceanSurfaceOptions() );
+            return ReadResult( node.get() );
+        }
+        else if ( osOptions )
+        {
+            node->apply( *osOptions );
+            return ReadResult( node.get() );
+        }
     }
+
+    Threading::PerObjectMap<MapNode*, osg::observer_ptr<DRoamNode> > _oceans;
 };
 
 REGISTER_OSGPLUGIN( ocean_surface, ReaderWriterOceanSurface )

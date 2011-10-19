@@ -99,7 +99,7 @@ protected:
     /** renders the draw list. */
     virtual void drawImplementation( osg::RenderInfo& renderInfo ) const;
 
-private:
+public:
     // list of manifold tris to render
     AMRDrawableList _drawList;
 
@@ -116,6 +116,7 @@ private:
     osg::ref_ptr<osg::Vec2Array>           _texCoords;
     osg::ref_ptr<osg::VertexBufferObject>  _patternVBO;
     osg::ref_ptr<osg::ElementBufferObject> _patternEBO;
+    osg::ref_ptr<osg::Uniform>             _seaLevelUniform;
 
 public: // temp
     // shader program that draws the virtual geometry

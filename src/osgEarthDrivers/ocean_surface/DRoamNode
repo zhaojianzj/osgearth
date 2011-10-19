@@ -20,12 +20,14 @@
 #define OSGEARTH_ENGINE_DROAM_MAPNODE_H 1
 
 #include "MeshManager"
+#include "OceanSurface"
 #include <osg/CoordinateSystemNode>
 #include <osg/Geode>
 #include <osg/NodeVisitor>
 #include <osgEarth/Map>
 
 using namespace osgEarth;
+using namespace osgEarth::Drivers;
 
 /**
  * D-ROAM: A diamond-based continuous manifold terrain engine.
@@ -53,21 +55,25 @@ class DRoamNode : public osg::Group
 public:
     /**
      * Constructs a new surface node.
-     * @param map        Map to associate with this surface
-     * @param maskLayer  Image layer to use for ocean masking (optional)
-     * @param bathyLayer Bathymetric elevation layer to use for ocean masking
+     * @param map      Map to associate with this surface
+     * @param options  Initial rendering options.
      */
     DRoamNode(
-        Map*            map, 
-        ImageLayer*     maskLayer  =0L,
-        ElevationLayer* bathyLayer =0L );
+        Map*                       map, 
+        const OceanSurfaceOptions& options );
+
+    /**
+     * Updates the options associated with this surface.
+     */
+    void apply( const OceanSurfaceOptions& options );
 
 public:
     virtual void traverse(osg::NodeVisitor& nv);
 
 private:
+    OceanSurfaceOptions          _options;
     osg::ref_ptr<osg::Geode>     _geode;
-    osg::ref_ptr<Manifold>      _manifold;
+    osg::ref_ptr<Manifold>       _manifold;
     osg::ref_ptr<MeshManager>    _mesh;
     osg::ref_ptr<Map>            _map;
     osg::ref_ptr<ImageLayer>     _maskLayer;

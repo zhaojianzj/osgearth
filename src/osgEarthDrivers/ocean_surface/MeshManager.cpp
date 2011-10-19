@@ -82,9 +82,15 @@ struct ElevationLayerRequest : public osgEarth::TaskRequest
 
 // --------------------------------------------------------------------------
 
-MeshManager::MeshManager( Manifold* manifold, Map* map, ImageLayer* maskLayer, ElevationLayer* bathyLayer ) :
+MeshManager::MeshManager(Manifold* manifold, 
+                         Map* map, 
+                         const OceanSurfaceOptions& options,
+                         ImageLayer* maskLayer,
+                         ElevationLayer* bathyLayer ) :
+
 _manifold       ( manifold ),
 _map            ( map ),
+_options        ( options ),
 _maskLayer      ( maskLayer ),
 _bathyLayer     ( bathyLayer ),
 _minGeomLevel   ( 1 ),
@@ -112,6 +118,15 @@ _maxJobsPerFrame( MAX_JOBS_PER_FRAME )
     _surfaceTex->setFilter( osg::Texture::MAG_FILTER, osg::Texture::LINEAR );
     _surfaceTex->setWrap( osg::Texture::WRAP_S, osg::Texture::REPEAT );
     _surfaceTex->setWrap( osg::Texture::WRAP_T, osg::Texture::REPEAT ); 
+    
+    apply( _options );
+}
+
+void
+MeshManager::apply( const OceanSurfaceOptions& options )
+{
+    _options = options;
+    _amrGeom->_seaLevelUniform->set( *options.seaLevel() );
 }
 
 NodeIndex

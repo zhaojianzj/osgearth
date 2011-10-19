@@ -37,6 +37,9 @@ CubeManifold::CubeManifold()
 void
 CubeManifold::initialize( MeshManager* mesh )
 {
+    // store the map's vertical SRS.
+    _mapVSRS = mesh->_map->getProfile()->getVerticalSRS();
+
     // diamonds at or below level 3 are static and cannot be removed.
     // Level 1 is the first Quadtree Ancestor. Level 3 contains the first Quadtree
     // decendants (the decendants of the Level 1 quadtrees).
@@ -366,11 +369,22 @@ CubeManifold::createNode( const osg::Vec3d& manCoord ) const
 
     node._manifoldCoord = manCoord;
     
+    // convert the manifold coordinates to lat/long/hae:
     toLonLatRad( manCoord, node._geodeticCoord );
+
+    // transform to the map's VSRS:
+    double mapMSL = node._geodeticCoord.z();
+
+    _profile->getVerticalSRS()->transform(
+        _mapVSRS.get(),
+        osg::RadiansToDegrees( node._geodeticCoord.y() ),
+        osg::RadiansToDegrees( node._geodeticCoord.x() ),
+        node._geodeticCoord.z(), 
+        mapMSL );
 
     osg::Matrixd local2world;
     _ellipsoid->computeLocalToWorldTransformFromLatLongHeight(
-        node._geodeticCoord.y(), node._geodeticCoord.x(), node._geodeticCoord.z(),
+        node._geodeticCoord.y(), node._geodeticCoord.x(), mapMSL,
         local2world );
 
     node._vertex = local2world.getTrans();

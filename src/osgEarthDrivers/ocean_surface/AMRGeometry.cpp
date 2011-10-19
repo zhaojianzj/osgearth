@@ -34,8 +34,7 @@ AMRTriangle::AMRTriangle()
 {
     _stateSet = new osg::StateSet();
 
-    // should this be INT_SAMPLER_2D?
-    _stateSet->getOrCreateUniform( "tex0", osg::Uniform::INT )->set( 0 );
+    _stateSet->getOrCreateUniform( "tex0", osg::Uniform::SAMPLER_2D )->set( 0 );
 }
 
 #define SET_UNIFORM(X,Y,Z) \
@@ -84,9 +83,9 @@ _node0(n0), _node1(n1), _node2(n2)
     //SET_UNIFORM( "n1", osg::Uniform::FLOAT_VEC3, _node1._normal * _world2local );
     //SET_UNIFORM( "n2", osg::Uniform::FLOAT_VEC3, _node2._normal * _world2local );
 
-    SET_UNIFORM( "r0", osg::Uniform::FLOAT_VEC4, _node0._geodeticRot.asVec4() );
-    SET_UNIFORM( "r1", osg::Uniform::FLOAT_VEC4, _node1._geodeticRot.asVec4() );
-    SET_UNIFORM( "r2", osg::Uniform::FLOAT_VEC4, _node2._geodeticRot.asVec4() );
+    //SET_UNIFORM( "r0", osg::Uniform::FLOAT_VEC4, _node0._geodeticRot.asVec4() );
+    //SET_UNIFORM( "r1", osg::Uniform::FLOAT_VEC4, _node1._geodeticRot.asVec4() );
+    //SET_UNIFORM( "r2", osg::Uniform::FLOAT_VEC4, _node2._geodeticRot.asVec4() );
 }
 
 void
@@ -110,6 +109,10 @@ AMRGeometry::AMRGeometry()
 {
     initShaders();
     initPatterns();
+
+    _seaLevelUniform = new osg::Uniform( osg::Uniform::FLOAT, "seaLevel" );
+    _seaLevelUniform->set( 0.0f );
+    this->getOrCreateStateSet()->addUniform( _seaLevelUniform.get() );
 }
 
 AMRGeometry::AMRGeometry( const AMRGeometry& rhs, const osg::CopyOp& op ) :
@@ -158,27 +161,14 @@ AMRGeometry::initShaders()
     _program = new osg::Program();
     _program->setName( "AMRGeometry" );
 
-#ifdef USE_GEOCENTRIC_INTERP
     osg::Shader* vertexShader = new osg::Shader( osg::Shader::VERTEX,
         std::string( source_vertShaderMain_geocentricMethod ) );
-#endif
-#ifdef USE_LINEAR_INTERP
-    osg::Shader* vertexShader = new osg::Shader( osg::Shader::VERTEX,
-        std::string( source_vertShaderMain_flatMethod ) );
-#endif
-#ifdef USE_SLERP_INTERP
-    osg::Shader* vertexShader = new osg::Shader( osg::Shader::VERTEX,
-        std::string( source_geodeticToXYZ ) +
-        std::string( source_rotVecToGeodetic ) +
-        std::string( source_vertShaderMain_slerpMethod ) );
-#endif
 
     vertexShader->setName( "AMR Vert Shader" );
     _program->addShader( vertexShader );
 
     osg::Shader* fragmentShader = new osg::Shader( osg::Shader::FRAGMENT,
-        std::string( source_fragShaderMain )
-        );
+        std::string( source_fragShaderMain ) );
 
     fragmentShader->setName( "AMR Frag Shader" );
     _program->addShader( fragmentShader );

@@ -70,15 +70,24 @@ struct PrintMe : public osg::NodeCallback {
 static EarthManipulator* s_manip         =0L;
 static Control*          s_controlPanel  =0L;
 static SkyNode*          s_sky           =0L;
+static OceanSurfaceNode* s_ocean         =0L;
 static bool              s_dms           =false;
 static bool              s_mgrs          =false;
-static bool              s_ocean         =false;
 
 struct SkySliderHandler : public ControlEventHandler
 {
     virtual void onValueChanged( class Control* control, float value )
     {
         s_sky->setDateTime( 2011, 3, 6, value );
+    }
+};
+
+struct ChangeSeaLevel : public ControlEventHandler
+{
+    virtual void onValueChanged( class Control* control, float value )
+    {
+        s_ocean->options().seaLevel() = value;
+        s_ocean->dirty();
     }
 };
 
@@ -229,6 +238,26 @@ createControlPanel( osgViewer::View* view, std::vector<Viewpoint>& vps )
 
         main->addControl( skyBox );
     }
+
+    // ocean MSL slider:
+    if ( s_ocean )
+    {
+        HBox* oceanBox = new HBox();
+        oceanBox->setChildVertAlign( Control::ALIGN_CENTER );
+        oceanBox->setChildSpacing( 10 );
+        oceanBox->setHorizFill( true );
+
+        oceanBox->addControl( new LabelControl("Sea Level: ", 16) );
+
+        HSliderControl* mslSlider = new HSliderControl( -250.0f, 250.0f, 0.0f );
+        mslSlider->setBackColor( Color::Gray );
+        mslSlider->setHeight( 12 );
+        mslSlider->setHorizFill( true, 200 );
+        mslSlider->addEventHandler( new ChangeSeaLevel() );
+        oceanBox->addControl( mslSlider );
+
+        main->addControl( oceanBox );
+    }
     
     canvas->addControl( main );
 
@@ -333,7 +362,7 @@ main(int argc, char** argv)
 
     bool useAutoClip  = arguments.read( "--autoclip" );
     bool useSky       = arguments.read( "--sky" );
-    s_ocean           = arguments.read( "--ocean" );
+    bool useOcean     = arguments.read( "--ocean" );
     s_dms             = arguments.read( "--dms" );
     s_mgrs            = arguments.read( "--mgrs" );
 
@@ -376,10 +405,11 @@ main(int argc, char** argv)
             }
 
             // Ocean surface.
-            if ( s_ocean )
+            if ( useOcean )
             {
-                osg::Node* oceanNode = OceanSurface::loadOceanSurface( mapNode->getMap() );
-                root->addChild( oceanNode );
+                s_ocean = new OceanSurfaceNode( mapNode );
+                if ( s_ocean )
+                    root->addChild( s_ocean );
             }
 
             if ( externals.hasChild("autoclip") )

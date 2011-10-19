@@ -23,6 +23,7 @@
 #include "Diamond"
 #include "Manifold"
 #include "AMRGeometry"
+#include "OceanSurface"
 #include <osgEarth/Map>
 #include <osgEarth/ImageLayer>
 #include <osgEarth/TaskService>
@@ -35,7 +36,7 @@
 #include <set>
 
 using namespace osgEarth;
-
+using namespace osgEarth::Drivers;
 
 typedef std::queue< osg::ref_ptr<Diamond> > DiamondQueue;
 
@@ -72,7 +73,15 @@ class MeshManager : public osg::Referenced
 {
 public:
     /** Construct the manager that will manage the mesh for the specified manifold. */
-    MeshManager( Manifold* manifold, Map* map, ImageLayer* maskLayer, ElevationLayer* bathyLayer );
+    MeshManager(
+        Manifold*                  manifold, 
+        Map*                       map, 
+        const OceanSurfaceOptions& options,
+        ImageLayer*                maskLayer, 
+        ElevationLayer*            bathyLayer );
+
+    /** Update the options for this mesh */
+    void apply( const OceanSurfaceOptions& options );
 
 public:
     /** Add a shared vertex (and its normal) to the mesh. */
@@ -101,6 +110,8 @@ public:
     inline const MeshNode& node( NodeIndex i ) { return _nodes[i]; }
 
 public:
+    OceanSurfaceOptions          _options;
+
     osg::ref_ptr<Manifold>       _manifold;
     osg::ref_ptr<Map>            _map;
     osg::ref_ptr<ImageLayer>     _maskLayer;

@@ -111,8 +111,9 @@ static char source_vertShaderMain_geocentricMethod[] =
 "uniform vec3 v0, v1, v2; \n"                // triangle verts
 "uniform vec2 t0, t1, t2; \n"                // triangle tex coords
 "uniform sampler2D tex0; \n"                 // heightfield encoded into 16 bit texture
+"uniform float seaLevel; \n"                 // sea level offset
 
-"varying float v_elevation; \n"              // elevation (HAE) of camera
+"varying float v_msl; \n"                    // elevation (MSL) of camera
 "varying float v_range; \n"                  // distance from camera to current vertex
 "varying float v_enorm; \n"                  // normalized terrain height at vertex [0..1]
 "varying vec2 texCoord0; \n"
@@ -127,7 +128,7 @@ static char source_vertShaderMain_geocentricMethod[] =
 
 // next interpolate the height along geocentric space (-ish):
 "   float h = length(v0)*u + length(v1)*v + length(v2)*w; \n"
-"   vec4 outVert4 = vec4( normalize(outVert3) * h, gl_Vertex.w ); \n"
+"   vec4 outVert4 = vec4( normalize(outVert3) * (h + seaLevel), gl_Vertex.w ); \n"
 "   gl_Position = gl_ModelViewProjectionMatrix * outVert4; \n"
 
 // set up the tex coords for the frag shader:
@@ -144,7 +145,7 @@ static char source_vertShaderMain_geocentricMethod[] =
 
 // calculate the approximate elevation:
 "   vec4 eye = osg_ViewMatrixInverse * vec4(0,0,0,1); \n"
-"   v_elevation = length(eye.xyz) - 6378137.0; \n"
+"   v_msl = length(eye.xyz) - 6378137.0 + seaLevel; \n"
 
 // calculate distance from camera to current vertex:
 "   v_range = distance(outVert3, gl_ModelViewMatrixInverse[3]); \n"
@@ -160,12 +161,13 @@ char source_fragShaderMain[] =
 "    return r0 + vr * (r1-r0); \n"
 "} \n"
 
-"varying float v_elevation; \n"              // elevation (HAE) of camera
+"varying float v_msl; \n"                    // elevation (MSL) of camera
 "varying float v_range; \n"                  // distance from camera to current vertex
 "varying float v_enorm; \n"                  // normalized terrain height at vertex [0..1]
 
 "varying vec2 texCoord0; \n"
 "uniform sampler2D tex1; \n"                 // intensity texture (water surface)
+"uniform float seaLevel; \n"                 // sea level offset
 
 "void main (void) \n"
 "{ \n"
@@ -173,13 +175,13 @@ char source_fragShaderMain[] =
 "    vec3 baseColor = vec3( 0.25, 0.35, 0.6 ); \n"
 
 // un-normalize the heightfield data
-"    float elev = (v_enorm * 65535.0) - 32768.0; \n"                  
+"    float terrainHeight = (v_enorm * 65535.0) - 32768.0; \n"                  
 
 // heightfield's effect on alpha [0..1]
-"    float elevEffect = remap( elev, -50.0, -10.0, 1.0, 0.0 ); \n" 
+"    float terrainEffect = remap( terrainHeight, seaLevel-50.0, seaLevel-10.0, 1.0, 0.0 ); \n" 
 
 // amplify the range's effect on alpha when the camera elevation gets low
-"    float rangeFactor = remap( v_elevation, -10000, 10000, 10.0, 1.0 ); \n"
+"    float rangeFactor = remap( v_msl, -10000, 10000, 10.0, 1.0 ); \n"
 "    float rangeEffect = remap( v_range, 75000, 200000 * rangeFactor, 1.0, 0.0 ); \n"
 
 // balance between texture-based alpha and static alpha
@@ -188,7 +190,7 @@ char source_fragShaderMain[] =
 "    float texEffect = mix( texIntensity, 0.8, texBalance ); \n"
 
 // color it
-"    gl_FragColor = vec4( baseColor, texEffect * elevEffect * rangeEffect); \n"
+"    gl_FragColor = vec4( baseColor, texEffect * terrainEffect * rangeEffect); \n"
 
 //"    gl_FragColor = vec4( 1, 0, 0, 1 ); \n" // debugging
 "} \n";

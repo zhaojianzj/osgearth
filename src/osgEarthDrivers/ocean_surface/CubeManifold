@@ -24,6 +24,7 @@
 #include "Diamond"
 #include <osg/CoordinateSystemNode>
 #include <osgEarth/Profile>
+#include <osgEarth/VerticalSpatialReference>
 
 /** The top-level diamond layout for a round earth */
 class CubeManifold : public Manifold
@@ -54,6 +55,7 @@ public: // Manifold overrides
 
 public:
     osg::BoundingSphere _bs;
+    osg::ref_ptr<const VerticalSpatialReference> _mapVSRS;
     osg::ref_ptr<const Profile> _profile;
     osg::ref_ptr<const osg::EllipsoidModel> _ellipsoid;
     osg::ref_ptr<Diamond> _vd[8]; // vertex diamonds
