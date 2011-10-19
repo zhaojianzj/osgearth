@@ -60,11 +60,6 @@ struct ElevationRequest : public osgEarth::TaskRequest
         }
 
         _myResult = GeoHeightField::mosaic( fields, _key );
-
-        //osg::ref_ptr<osg::HeightField> hf;
-        //_map->getHeightField( _key, true, hf, 0L, INTERP_AVERAGE, SAMPLE_FIRST_VALID, progress );
-        //if ( hf.valid() )
-        //    _myResult = GeoHeightField( hf.get(), _key.getExtent(), _key.getProfile()->getVerticalSRS() );
     }
 
     osg::ref_ptr<Map> _map;
@@ -105,12 +100,11 @@ _maxJobsPerFrame( MAX_JOBS_PER_FRAME )
 
     _amrGeode = new osg::Geode();
     _amrGeode->addDrawable( _amrGeom.get() );
-    //_amrGeode->getOrCreateStateSet()->setAttributeAndModes( new osg::CullFace( osg::CullFace::BACK ), 1 );
 
     // set up the manifold framework.
     manifold->initialize( this );
 
-    // the surface texture
+    // the surface texture- TODO
     osg::Image* surfaceImage = URI( "../data/oceanalpha.int" ).readImage();
     _surfaceTex = new osg::Texture2D( surfaceImage );   
     _surfaceTex->setFilter( osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR );
@@ -193,7 +187,7 @@ MeshManager::queueForImage( Diamond* d, float priority )
             _imageQueue.push_back( DiamondJob( d, priority ) );
             d->_queuedForImage = true;
         }
-#if 0
+
         else if ( _bathyLayer.valid() )
         {
             d->_imageRequest = new ElevationLayerRequest( _bathyLayer.get(), d->_key );
@@ -201,7 +195,7 @@ MeshManager::queueForImage( Diamond* d, float priority )
             _imageQueue.push_back( DiamondJob( d, priority ) );
             d->_queuedForImage = true;
         }
-#endif
+
         else if ( _map.valid() )
         {
             d->_imageRequest = new ElevationRequest( _map.get(), d->_key );
@@ -209,31 +203,6 @@ MeshManager::queueForImage( Diamond* d, float priority )
             _imageQueue.push_back( DiamondJob( d, priority ) );
             d->_queuedForImage = true;
         }
-
-//#ifdef USE_WATER_MASK
-//        d->_imageRequest = new ImageRequest( _maskLayer.get(), d->_key );
-//#else
-//        d->_imageRequest = new ElevationRequest( _map.get(), d->_key );
-//#endif // USE_WATER_MASK
-//        _imageService->add( d->_imageRequest.get() );
-//        _imageQueue.push_back( DiamondJob( d, priority ) );
-//        d->_queuedForImage = true;
-
-#if 0
-        //TEMP: grab the masking layer.
-        d->_imageRequest = new ImageRequest( _maskLayer.get(), d->_key );
-        _imageService->add( d->_imageRequest.get() );
-        _imageQueue.push_back( DiamondJob( d, priority ) );
-        d->_queuedForImage = true;
-#endif
-
-#if 0
-        //OE_NOTICE << "REQ: " << d->_key->str() << " queueing request..." << std::endl;
-        d->_imageRequest = new ImageRequest( _map->getImageLayerAt(0), d->_key );
-        _imageService->add( d->_imageRequest.get() );
-        _imageQueue.push_back( DiamondJob( d, priority ) );
-        d->_queuedForImage = true;
-#endif
     }
 }
 
@@ -356,7 +325,6 @@ MeshManager::update()
                     }
                 }
 
-#if 0
                 else if ( _bathyLayer.valid() )
                 {
                     const osg::HeightField* hf = dynamic_cast<osg::HeightField*>( d->_imageRequest->getResult() );
@@ -377,7 +345,6 @@ MeshManager::update()
                         tex->setUnRefImageDataAfterApply( true );
                     }
                 }
-#endif
 
                 else if ( _map.valid() )
                 {
@@ -410,8 +377,6 @@ MeshManager::update()
 
                     tex->setWrap( osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE );
                     tex->setWrap( osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE );
-                    //tex->setFilter( osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR );
-                    //tex->setFilter( osg::Texture::MAG_FILTER, osg::Texture::LINEAR );
                     d->_stateSet->setTextureAttributeAndModes( 0, tex, osg::StateAttribute::ON );
                     d->_stateSet->dirty(); // bump revision number so that users of this stateset can detect the change
                     d->_hasFinalImage = true;

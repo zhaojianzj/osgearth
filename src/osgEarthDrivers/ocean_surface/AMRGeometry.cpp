@@ -41,7 +41,7 @@ AMRTriangle::AMRTriangle()
 #define SET_UNIFORM(X,Y,Z) \
     _stateSet->getOrCreateUniform( X , Y )->set( Z )
 
-#define NO_LOCALIZE
+//#define LOCALIZE_VERTS 1
 
 
 AMRTriangle::AMRTriangle(const MeshNode& n0, const osg::Vec2& t0,
@@ -49,9 +49,6 @@ AMRTriangle::AMRTriangle(const MeshNode& n0, const osg::Vec2& t0,
                          const MeshNode& n2, const osg::Vec2& t2) :
 _node0(n0), _node1(n1), _node2(n2)
 {
-    _local2world = osg::Matrix::translate( 
-        - ( _node0._vertex + _node1._vertex + _node2._vertex ) / 3.0 ); //-_node0._vertex );
-    _world2local = osg::Matrix::inverse(_local2world);
 
     _stateSet = new osg::StateSet();
     // should this be INT_SAMPLER_2D?
@@ -61,15 +58,19 @@ _node0(n0), _node1(n1), _node2(n2)
     SET_UNIFORM( "c1", osg::Uniform::FLOAT_VEC3, _node1._geodeticCoord );
     SET_UNIFORM( "c2", osg::Uniform::FLOAT_VEC3, _node2._geodeticCoord );
 
-#ifdef NO_LOCALIZE
-    SET_UNIFORM( "v0", osg::Uniform::FLOAT_VEC3, _node0._vertex );
-    SET_UNIFORM( "v1", osg::Uniform::FLOAT_VEC3, _node1._vertex );
-    SET_UNIFORM( "v2", osg::Uniform::FLOAT_VEC3, _node2._vertex );
-#else
+#ifdef LOCALIZE_VERTS
+    _local2world = osg::Matrix::translate( 
+        - ( _node0._vertex + _node1._vertex + _node2._vertex ) / 3.0 );
+    _world2local = osg::Matrix::inverse(_local2world);
+
     SET_UNIFORM( "v0", osg::Uniform::FLOAT_VEC3, _node0._vertex * _world2local );
     SET_UNIFORM( "v1", osg::Uniform::FLOAT_VEC3, _node1._vertex * _world2local );
     SET_UNIFORM( "v2", osg::Uniform::FLOAT_VEC3, _node2._vertex * _world2local );
-#endif
+#else
+    SET_UNIFORM( "v0", osg::Uniform::FLOAT_VEC3, _node0._vertex );
+    SET_UNIFORM( "v1", osg::Uniform::FLOAT_VEC3, _node1._vertex );
+    SET_UNIFORM( "v2", osg::Uniform::FLOAT_VEC3, _node2._vertex );
+#endif // LOCALIZE_VERTS
 
     SET_UNIFORM( "t0", osg::Uniform::FLOAT_VEC2, t0 );
     SET_UNIFORM( "t1", osg::Uniform::FLOAT_VEC2, t1 );
@@ -109,12 +110,10 @@ AMRGeometry::AMRGeometry()
 {
     initShaders();
     initPatterns();
-
-    //this->setBound( osg::BoundingBox(-1e10, -1e10, -1e10, 1e10, 1e10, 1e10) );
 }
 
 AMRGeometry::AMRGeometry( const AMRGeometry& rhs, const osg::CopyOp& op ) :
-osg::Drawable( rhs, op ) //osg::Geometry( rhs, op )
+osg::Drawable( rhs, op )
 {
     //todo
     setInitialBound( osg::BoundingBox(-1e10, -1e10, -1e10, 1e10, 1e10, 1e10) );
@@ -284,7 +283,7 @@ AMRGeometry::initPatterns()
         _numPatternTriangles += (e->size()-1)/2;     
     }
 
-    OE_INFO << LC
+    OE_DEBUG << LC
         << "Pattern: "   << std::dec
         << "verts="      << _numPatternVerts
         << ", strips="   << _numPatternStrips
@@ -327,11 +326,11 @@ AMRGeometry::drawImplementation( osg::RenderInfo& renderInfo ) const
             // apply the primitive's state changes:
             state.apply( dtemplate->_stateSet.get() );
 
-#ifndef NO_LOCALIZE
+#ifdef LOCALIZE_VERTS
             osg::ref_ptr<osg::RefMatrix> rm = new osg::RefMatrix( dtemplate->_local2world * modelView );
             state.applyModelViewMatrix( rm.get() );
             state.applyModelViewAndProjectionUniformsIfRequired();
-#endif
+#endif // LOCALIZE_VERTS
 
             // render the pattern (a collection of primitive sets)
             for( Pattern::const_iterator p = _pattern.begin(); p != _pattern.end(); ++p )
@@ -348,7 +347,7 @@ AMRGeometry::drawImplementation( osg::RenderInfo& renderInfo ) const
     if ( s_numTemplates != numTemplates )
     {
         s_numTemplates = numTemplates;
-        OE_INFO << LC << std::dec 
+        OE_DEBUG << LC << std::dec 
             << "templates="  << numTemplates
             << ", verts="    << numTemplates*_numPatternVerts
             << ", strips="   << numTemplates*_numPatternStrips

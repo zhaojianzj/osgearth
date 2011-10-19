@@ -47,56 +47,31 @@ using namespace osgEarth;
  * quads correspond to the faces of the base cube manifold, and all sub-quads fall within these
  * 6 faces. We can then use osgEarth's Cube SRS to map textures directly to these quadtree
  * ancestor geometries.
- *
- * The final problem was dealing with double precision. osgTerrain localizes each terrain tile
- * to solve this problem. Doing that would break our continuous mesh. So instead we will subdivide
- * the mesh into a fixed number of localized regions, and maintain a geometry per-diamond for each
- * region. We can optimize this when we know that a diamond will never render in a particular 
- * region. We select which region to render based on camera position.
- *
- * NOTE: OSG's stats will report outrageous numbers of verticies for this node. That is due to the
- * shared vertex array. Stats counts the vertex array once for each geometry in the mesh, resulting
- * in an exaggerated count. In fact, the real vertex count should be equal to the primitive count
- * (since there is one vertex per diamond).
  */
-class DRoamNode : public osg::CoordinateSystemNode
+class DRoamNode : public osg::Group
 {
 public:
-    DRoamNode( Map* map =0L, ImageLayer* maskLayer =0L, ElevationLayer* bathyLayer =0L );
-    DRoamNode( const DRoamNode& rhs, const osg::CopyOp& op =osg::CopyOp::DEEP_COPY_ALL );
-    META_Node(osgEarth,DRoamNode);
+    /**
+     * Constructs a new surface node.
+     * @param map        Map to associate with this surface
+     * @param maskLayer  Image layer to use for ocean masking (optional)
+     * @param bathyLayer Bathymetric elevation layer to use for ocean masking
+     */
+    DRoamNode(
+        Map*            map, 
+        ImageLayer*     maskLayer  =0L,
+        ElevationLayer* bathyLayer =0L );
 
+public:
     virtual void traverse(osg::NodeVisitor& nv);
 
 private:
-    osg::ref_ptr<osg::Geode>          _geode;
-    osg::ref_ptr<Manifold>            _manifold;
-    osg::ref_ptr<MeshManager>         _mesh;
-    osg::ref_ptr<Map>                 _map;
-    osg::ref_ptr<ImageLayer>          _maskLayer;
-    osg::ref_ptr<ElevationLayer>      _bathyLayer;
-
-#if 0
-private:
-    void update( osg::NodeVisitor* nv );
-    void cull( osg::NodeVisitor* nv );
-
-    struct MyCullCallback : public osg::NodeCallback {
-        void operator()( osg::Node* node, osg::NodeVisitor* nv ) {
-            static_cast<DRoamNode*>(node)->cull( nv );
-            traverse( node, nv );
-        }
-    };
-    friend struct MyCullCallback;
-
-    struct MyUpdateCallback : public osg::NodeCallback {
-        void operator()( osg::Node* node, osg::NodeVisitor* nv ) {
-            static_cast<DRoamNode*>(node)->update( nv );
-            traverse( node, nv );
-        }
-    };
-    friend struct MyUpdateCallback;
-#endif
+    osg::ref_ptr<osg::Geode>     _geode;
+    osg::ref_ptr<Manifold>      _manifold;
+    osg::ref_ptr<MeshManager>    _mesh;
+    osg::ref_ptr<Map>            _map;
+    osg::ref_ptr<ImageLayer>     _maskLayer;
+    osg::ref_ptr<ElevationLayer> _bathyLayer;
 };
 
 #endif // OSGEARTH_ENGINE_DROAM_MAPNODE_H

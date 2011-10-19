@@ -59,19 +59,10 @@ struct ReaderWriterOceanSurface : public osgDB::ReaderWriter
 
         if ( options )
         {
-            map       = static_cast<Map*>( const_cast<void*>(options->getPluginData("osgEarth::Map")) );
-            //maskLayer = static_cast<ImageLayer*>( const_cast<void*>(options->getPluginData("osgEarth::ImageLayer")) );
+            map        = static_cast<Map*>( const_cast<void*>(options->getPluginData("map")) );
+            maskLayer  = static_cast<ImageLayer*>( const_cast<void*>(options->getPluginData("mask_layer")) );
+            bathyLayer = static_cast<ElevationLayer*>( const_cast<void*>(options->getPluginData("bathy_layer")) );
         }
-
-#ifdef USE_IMAGE_MASK
-        TMSOptions mask_o;
-        mask_o.url() = "http://readymap.org/readymap/tiles/1.0.0/2/";
-        maskLayer = new ImageLayer( "ocean mask", mask_o );
-#else
-        TMSOptions bathy_o;
-        bathy_o.url() = "http://readymap.org/readymap/tiles/1.0.0/9/";
-        bathyLayer = new ElevationLayer( "bathymetry", bathy_o );
-#endif
 
         return new DRoamNode( map, maskLayer, bathyLayer );
     }

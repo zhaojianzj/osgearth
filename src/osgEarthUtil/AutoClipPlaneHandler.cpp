@@ -112,6 +112,8 @@ namespace
         template<class matrix_type, class value_type>
         bool _clampProjectionMatrix(matrix_type& projection, double& znear, double& zfar, value_type nearFarRatio) const
         {
+            //OE_INFO << "clamp to [" << znear << " <=> " << zfar << "]" << std::endl;
+
             double epsilon = 1e-6;
             if (zfar<znear-epsilon)
             {
@@ -216,18 +218,21 @@ namespace
 
 
 
-AutoClipPlaneCallback2::AutoClipPlaneCallback2( const Map* map ) :
-_geocentric          ( false ),
+AutoClipPlaneCallback2::AutoClipPlaneCallback2( Map* map ) :
+_map                 ( map ),
 _minNearFarRatio     ( 0.00001 ),
 _maxNearFarRatio     ( 0.0005 ),
 _rp                  ( -1 ),
-_autoFarPlaneClipping( true )
+_autoFarPlaneClipping( true ),
+_eq                  ( map )
 {
     if ( map )
     {
-        _geocentric = map->isGeocentric();
-        if ( _geocentric )
-            _rp = map->getProfile()->getSRS()->getEllipsoid()->getRadiusPolar();
+        _rp = map->getProfile()->getSRS()->getEllipsoid()->getRadiusPolar();
+    }
+    else
+    {
+        _rp = 6356752.3142;
     }
 }
 
@@ -238,33 +243,68 @@ AutoClipPlaneCallback2::operator()( osg::Node* node, osg::NodeVisitor* nv )
     if ( cv )
     {
         osg::Camera* cam = cv->getCurrentCamera();
-        osg::View* view = cam->getView();
-        osg::ref_ptr<osg::CullSettings::ClampProjectionMatrixCallback>& clamper = _clampers.get(view);
+        osg::ref_ptr<osg::CullSettings::ClampProjectionMatrixCallback>& clamper = _clampers.get(cam);
         if ( !clamper.valid() )
         {
             clamper = new CustomProjClamper();
+            cam->setClampProjectionMatrixCallback( clamper.get() );
         }
-
-        osg::Vec3d eye, center, up;
-        cam->getViewMatrixAsLookAt( eye, center, up );
-        double d = eye.length();
-
-        if ( d < _rp )
+        else
         {
-            d = _rp;
-        }
-        else if ( d > _rp )
-        {
+            osg::Vec3d eye, center, up;
+            cam->getViewMatrixAsLookAt( eye, center, up );
+
+            osg::Vec3d loc;
+            _map->worldPointToMapPoint( eye, loc );
+
+            //double elevation;
+            //_eq.getElevation( loc, 0L, elevation, 10.0 );
+
+            //double hat = loc.z() - elevation;
+
+            double hat = loc.z();
+
             CustomProjClamper* c = static_cast<CustomProjClamper*>(clamper.get());
+            if ( hat > 250.0 )
+            {
+                c->_minNear = -DBL_MAX;
+                c->_maxFar  =  DBL_MAX;
+                c->_nearFarRatio = 0.0005;
+            }
+            else
+            {
+                c->_minNear = -DBL_MAX;
+                c->_maxFar  =  DBL_MAX;
+                c->_nearFarRatio = 0.00001;
+            }
+#if 0
+            double d = eye.length();
 
-            c->_minNear = -99999999.0;
+            if ( d < _rp )
+            {
+                d = _rp;
+            }
+            else if ( d > _rp )
+            {
+                CustomProjClamper* c = static_cast<CustomProjClamper*>(clamper.get());
 
-            double horizon = sqrt( d*d - _rp*_rp );
-            c->_maxFar = horizon;
+                c->_minNear = -99999999.0;
 
-            double delta = _maxNearFarRatio - _minNearFarRatio;
-            c->_nearFarRatio = _minNearFarRatio + delta*((d-_rp)/d);
+                double horizon = sqrt( d*d - _rp*_rp );
+                c->_maxFar = horizon;
+
+                double delta = _maxNearFarRatio - _minNearFarRatio;
+                c->_nearFarRatio = _minNearFarRatio + delta*((d-_rp)/d);
+            
+            }
+#endif
         }
+
+                {
+                    double n, f, a, v;
+                    cv->getProjectionMatrix()->getPerspective(v, a, n, f);
+                    OE_INFO << std::fixed << "near = " << n << ", far = " << f << ", ratio = " << n/f << std::endl;
+                }
         
     }
     traverse( node, nv );

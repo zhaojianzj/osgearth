@@ -23,8 +23,10 @@
 #include <osgEarth/MapNode>
 #include <osgEarth/ThreadingUtils>
 #include <osgEarth/Utils>
+#include <osgEarth/ElevationQuery>
 #include <osgGA/GUIEventHandler>
 #include <osgGA/EventVisitor>
+#include <osg/Camera>
 
 namespace osgEarth { namespace Util
 {
@@ -90,14 +92,15 @@ namespace osgEarth { namespace Util
 
     struct OSGEARTHUTIL_EXPORT AutoClipPlaneCallback2 : public osg::NodeCallback
     {
-        AutoClipPlaneCallback2( const Map* map =0L );
+        AutoClipPlaneCallback2( Map* map =0L );
         virtual void operator()( osg::Node* node, osg::NodeVisitor* nv );
         
-        bool   _geocentric;
+        osg::ref_ptr<Map> _map;
+        ElevationQuery _eq;
         double _minNearFarRatio, _maxNearFarRatio;
         double _rp;
         bool   _autoFarPlaneClipping;
-        Threading::PerObjectMap< osg::View*, osg::ref_ptr<osg::CullSettings::ClampProjectionMatrixCallback> > _clampers;
+        Threading::PerObjectMap< osg::Camera*, osg::ref_ptr<osg::CullSettings::ClampProjectionMatrixCallback> > _clampers;
     };
 
 

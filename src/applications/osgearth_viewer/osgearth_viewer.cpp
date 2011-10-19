@@ -384,7 +384,8 @@ main(int argc, char** argv)
             // close to the ground, you may not need this.
             if ( useAutoClip )
             {
-                viewer.getCamera()->addEventCallback( new AutoClipPlaneCallback2() );
+                //viewer.getCamera()->addEventCallback( new AutoClipPlaneCallback() );
+                viewer.getCamera()->addCullCallback( new AutoClipPlaneCallback2(mapNode->getMap()) );
             }
         }
 
@@ -425,9 +426,8 @@ main(int argc, char** argv)
         // Load an ocean surface if requested
         if ( s_ocean )
         {
-            ImageLayer* maskLayer = mapNode->getMap()->getImageLayerByName( "ocean" );
-            osg::Node* oceanNode = OceanSurface::loadOceanSurface( mapNode->getMap(), maskLayer );
-            root->insertChild( 0, oceanNode );
+            osg::Node* oceanNode = OceanSurface::loadOceanSurface( mapNode->getMap() );
+            root->addChild( oceanNode );
         }
     }
 
@@ -444,7 +444,7 @@ main(int argc, char** argv)
     viewer.addEventHandler(new osgViewer::LODScaleHandler());
     viewer.addEventHandler(new osgGA::StateSetManipulator(viewer.getCamera()->getOrCreateStateSet()));
 
-    viewer.getCamera()->setCullCallback( new PrintMe() );
+    //viewer.getCamera()->addCullCallback( new PrintMe() );
 
     return viewer.run();
 }

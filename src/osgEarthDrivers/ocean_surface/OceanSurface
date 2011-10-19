@@ -43,13 +43,13 @@ namespace osgEarth { namespace Drivers {
          */
         static osg::Node* loadOceanSurface(
             Map*                       map,
-            ImageLayer*                oceanMaskLayer,
             const OceanSurfaceOptions& osOptions =OceanSurfaceOptions() )
         {
             osg::ref_ptr<osgDB::Options> options = new osgDB::Options();
-            options->setPluginData( "osgEarth::Map", (void*)map );
-            options->setPluginData( "osgEarth::ImageLayer", (void*)oceanMaskLayer );
-            options->setPluginData( "osgEarth::OceanSurfaceOptions", (void*)&osOptions );
+            options->setPluginData( "map", (void*)map );
+            //options->setPluginData( "mask_layer", (void*)oceanMaskLayer );
+            //options->setPluginData( "bathy_layer", (void*)oceanBathyLayer );
+            options->setPluginData( "options", (void*)&osOptions );
 
             osgDB::ReaderWriter::ReadResult r = osgDB::readNodeFile( ".ocean_surface", options.get() );
             return r.takeNode();

@@ -32,30 +32,10 @@ _map       ( map ),
 _maskLayer ( maskLayer ),
 _bathyLayer( bathyLayer )
 {
-    //this->setCullCallback( new MyCullCallback );
-    //this->setUpdateCallback( new MyUpdateCallback );
     this->setNumChildrenRequiringUpdateTraversal( 1 );
 
-    //todo: do we really need all CSN stuff? (probably not)
-    if ( _map.valid() )
-    {
-        const SpatialReference* srs = _map->getProfile()->getSRS();
-        this->setCoordinateSystem( srs->getInitString() );
-        this->setCoordinateSystem( srs->getInitType() );
-        this->setEllipsoidModel  ( const_cast<osg::EllipsoidModel*>(srs->getEllipsoid()) );
-    }
-    else
-    {
-        this->setCoordinateSystem( "EPSG:4326" );
-        this->setFormat( "WKT" );
-        this->setEllipsoidModel( new osg::EllipsoidModel() );
-    }
-
-#ifdef USE_GEODETIC_MANIFOLD
-    _manifold = new GeodeticManifold();
-#else
     _manifold = new CubeManifold();
-#endif
+
     _mesh = new MeshManager( _manifold.get(), _map.get(), _maskLayer.get(), _bathyLayer.get() );
 
     _mesh->_maxActiveLevel = MAX_ACTIVE_LEVEL;
@@ -74,43 +54,6 @@ _bathyLayer( bathyLayer )
     sset->setRenderBinDetails( 15, "RenderBin" ); //, "DepthSortedBin" );
 }
 
-DRoamNode::DRoamNode( const DRoamNode& rhs, const osg::CopyOp& op ) :
-osg::CoordinateSystemNode( rhs, op ),
-_manifold( rhs._manifold.get() )
-{
-    //nop
-}
-
-#if 0
-void
-DRoamNode::cull( osg::NodeVisitor* nv )
-{
-    osgUtil::CullVisitor* cv = static_cast<osgUtil::CullVisitor*>( nv );
-
-    // reset the drawable set list. we will populate it by traversing the
-    // manifold and collecting drawables that are visible. The new drawables
-    // list does not actually take effect until the next frame. So yes, the culling is
-    // one frame out of sync with the draw. We should probably think of a way to fix that.
-    //_mesh->_activeDrawables.clear();
-
-    _mesh->_amrDrawList.clear();
-
-    _manifold->cull( static_cast<osgUtil::CullVisitor*>( nv ) );
-
-    // I know is not strictly kosher to modify the scene graph from the CULL traversal. But
-    // we need frame-coherence, and both the Geode and all Geometry's are marked with DYNAMIC
-    // data variance .. so hopefully this is safe.
-    _mesh->_amrGeom->setDrawList( _mesh->_amrDrawList );
-    _mesh->_amrGeode->dirtyBound();
-}
-
-void 
-DRoamNode::update( osg::NodeVisitor* nv )
-{
-    _mesh->update();
-}
-#endif
-
 void
 DRoamNode::traverse( osg::NodeVisitor& nv )
 {
@@ -123,12 +66,9 @@ DRoamNode::traverse( osg::NodeVisitor& nv )
         _manifold->cull( cv );
 
         // I know is not strictly kosher to modify the scene graph from the CULL traversal. But
-        // we need frame-coherence, and both the Geode and all Geometry's are marked with DYNAMIC
-        // data variance .. so hopefully this is safe.
+        // we need frame-coherence, and our one Drawable is marked DYNAMIC so it should be safe.
         _mesh->_amrGeom->setDrawList( _mesh->_amrDrawList );
         _mesh->_amrGeode->dirtyBound();
-
-        //cv->addDrawable( _mesh->_amrGeom.get(), cv->getModelViewMatrix() );
 
 #ifdef DISABLE_NEAR_FAR
         osg::CullSettings::ComputeNearFarMode saveMode = cv->getComputeNearFarMode();
