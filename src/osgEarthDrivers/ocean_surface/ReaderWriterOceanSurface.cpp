@@ -38,7 +38,7 @@ struct ReaderWriterOceanSurface : public osgDB::ReaderWriter
 {
     ReaderWriterOceanSurface()
     {
-        supportsExtension( "ocean_surface", "Ocean Surface" );
+        supportsExtension( "osgearth_ocean_surface", "Ocean Surface" );
     }
 
     ReadResult readObject(const std::string& url, const Options* options) const
@@ -82,4 +82,4 @@ struct ReaderWriterOceanSurface : public osgDB::ReaderWriter
     Threading::PerObjectMap<MapNode*, osg::observer_ptr<DRoamNode> > _oceans;
 };
 
-REGISTER_OSGPLUGIN( ocean_surface, ReaderWriterOceanSurface )
+REGISTER_OSGPLUGIN( osgearth_ocean_surface, ReaderWriterOceanSurface )

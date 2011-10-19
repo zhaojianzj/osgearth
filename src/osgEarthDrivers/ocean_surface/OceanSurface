@@ -105,7 +105,7 @@ namespace osgEarth { namespace Drivers {
                 osg::ref_ptr<osgDB::Options> o = new osgDB::Options();
                 o->setPluginData( "mapNode", (void*)_mapNode.get() );
                 o->setPluginData( "options", (void*)&_options );
-                osgDB::ReaderWriter::ReadResult r = osgDB::readNodeFile( ".ocean_surface", o.get() );
+                osgDB::ReaderWriter::ReadResult r = osgDB::readNodeFile( ".osgearth_ocean_surface", o.get() );
                 result = r.takeNode();
             }
             return result;

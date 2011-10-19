@@ -23,7 +23,6 @@ SET(LIB_PUBLIC_HEADERS
 	MeasureTool
     ObjectPlacer
     ObjectLocator
-    OceanSurfaceNode
     SkyNode
     SpatialData
     StarData
@@ -45,7 +44,6 @@ SET(LIB_COMMON_FILES
 	MeasureTool.cpp
     ObjectPlacer.cpp
     ObjectLocator.cpp
-    OceanSurfaceNode.cpp
     SpatialData.cpp
     SkyNode.cpp
     Viewpoint.cpp
