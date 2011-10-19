@@ -145,6 +145,9 @@ public:
     osg::ref_ptr<osg::Geode>    _amrGeode;    // geode that hold the AMRGeometry
     osg::ref_ptr<AMRGeometry>   _amrGeom;     // virtual geometry node
     AMRDrawableList             _amrDrawList; // culling result
+
+private:
+    void updateSurfaceTex( osg::Image* );
 };
 
 #endif // OSGEARTH_DROAM_ENGINE_MESH_MANAGER_H

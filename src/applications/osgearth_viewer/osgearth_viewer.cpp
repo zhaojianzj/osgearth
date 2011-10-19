@@ -407,7 +407,10 @@ main(int argc, char** argv)
             // Ocean surface.
             if ( useOcean )
             {
-                s_ocean = new OceanSurfaceNode( mapNode );
+                OceanSurfaceOptions ocean_opts;
+                ocean_opts.alphaImageURI() = URI("../data/oceanalpha.int");
+
+                s_ocean = new OceanSurfaceNode( mapNode, ocean_opts );
                 if ( s_ocean )
                     root->addChild( s_ocean );
             }

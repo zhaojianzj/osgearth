@@ -90,7 +90,6 @@ MeshManager::MeshManager(Manifold* manifold,
 
 _manifold       ( manifold ),
 _map            ( map ),
-_options        ( options ),
 _maskLayer      ( maskLayer ),
 _bathyLayer     ( bathyLayer ),
 _minGeomLevel   ( 1 ),
@@ -111,22 +110,46 @@ _maxJobsPerFrame( MAX_JOBS_PER_FRAME )
     // set up the manifold framework.
     manifold->initialize( this );
 
-    // the surface texture- TODO
-    osg::Image* surfaceImage = URI( "../data/oceanalpha.int" ).readImage();
-    _surfaceTex = new osg::Texture2D( surfaceImage );   
-    _surfaceTex->setFilter( osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR );
-    _surfaceTex->setFilter( osg::Texture::MAG_FILTER, osg::Texture::LINEAR );
-    _surfaceTex->setWrap( osg::Texture::WRAP_S, osg::Texture::REPEAT );
-    _surfaceTex->setWrap( osg::Texture::WRAP_T, osg::Texture::REPEAT ); 
+    updateSurfaceTex( 0L );
     
-    apply( _options );
+    apply( options );
 }
 
 void
 MeshManager::apply( const OceanSurfaceOptions& options )
 {
-    _options = options;
     _amrGeom->_seaLevelUniform->set( *options.seaLevel() );
+
+    if ( *_options.alphaImageURI() != *options.alphaImageURI() )
+    {
+        osg::Image* newImage = 0L;
+        if ( options.alphaImageURI().isSet() )
+            newImage = options.alphaImageURI()->readImage();
+        updateSurfaceTex( newImage );
+    }
+    else if ( _options.alphaImage().get() != options.alphaImage().get() )
+    {
+        updateSurfaceTex( options.alphaImage().get() );
+    }
+
+    _options = options;
+}
+
+void
+MeshManager::updateSurfaceTex( osg::Image* image )
+{
+    if ( !image )
+    {
+        image = new osg::Image();
+        image->allocateImage( 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE );
+        *(image->data(0, 0)) = 0xFFFFFFFF;
+    }
+
+    _surfaceTex = new osg::Texture2D( image );
+    _surfaceTex->setFilter( osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR );
+    _surfaceTex->setFilter( osg::Texture::MAG_FILTER, osg::Texture::LINEAR );
+    _surfaceTex->setWrap( osg::Texture::WRAP_S, osg::Texture::REPEAT );
+    _surfaceTex->setWrap( osg::Texture::WRAP_T, osg::Texture::REPEAT ); 
 }
 
 NodeIndex

@@ -152,6 +152,18 @@ URI::URI( const char* location )
     _fullURI = _baseURI;
 }
 
+bool
+URI::operator == ( const URI& rhs ) const
+{
+    return _fullURI == rhs._fullURI;
+}
+
+bool
+URI::operator != ( const URI& rhs ) const
+{
+    return _fullURI != rhs._fullURI;
+}
+
 URI
 URI::append( const std::string& suffix ) const
 {
