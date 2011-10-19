@@ -42,18 +42,18 @@ struct ImageRequest : public osgEarth::TaskRequest
 
 struct ElevationRequest : public osgEarth::TaskRequest
 {
-    ElevationRequest( Map* map, const TileKey& key ) : _map(map), _key(key) { }
+    ElevationRequest( Map* map, const TileKey& key ) : _mapf(map), _key(key) { }
 
     void operator()( ProgressCallback* progress )
     {
         std::vector<TileKey> newkeys;
-        _map->getProfile()->getIntersectingTiles( _key, newkeys );
+        _mapf.getProfile()->getIntersectingTiles( _key, newkeys );
 
         std::vector<GeoHeightField> fields;
         for( std::vector<TileKey>::const_iterator i = newkeys.begin(); i != newkeys.end(); ++i )
         {
             osg::ref_ptr<osg::HeightField> hf;
-            if ( _map->getHeightField( *i, true, hf, 0L ) )
+            if ( _mapf.getHeightField( *i, true, hf, 0L ) )
             {
                 fields.push_back( GeoHeightField( hf.get(), i->getExtent(), i->getProfile()->getVerticalSRS() ) );
             }
@@ -62,9 +62,9 @@ struct ElevationRequest : public osgEarth::TaskRequest
         _myResult = GeoHeightField::mosaic( fields, _key );
     }
 
-    osg::ref_ptr<Map> _map;
-    TileKey _key;
-    GeoHeightField _myResult;
+    MapFrame         _mapf;
+    TileKey          _key;
+    GeoHeightField   _myResult;
 };
 
 struct ElevationLayerRequest : public osgEarth::TaskRequest
@@ -93,7 +93,8 @@ _maxActiveLevel ( MAX_ACTIVE_LEVEL ),
 _maxJobsPerFrame( MAX_JOBS_PER_FRAME )
 {
     // fire up a task service to load textures.
-    _imageService = new TaskService( "Image Service", 16 );
+    unsigned numTasks = 8;
+    _taskService = new TaskService( "Ocean Service", numTasks );
 
     _amrGeom = new AMRGeometry();
     _amrGeom->setDataVariance( osg::Object::DYNAMIC );
@@ -183,7 +184,7 @@ MeshManager::queueForImage( Diamond* d, float priority )
         if ( _maskLayer.valid() )
         {
             d->_imageRequest = new ImageRequest( _maskLayer.get(), d->_key );
-            _imageService->add( d->_imageRequest.get() );
+            _taskService->add( d->_imageRequest.get() );
             _imageQueue.push_back( DiamondJob( d, priority ) );
             d->_queuedForImage = true;
         }
@@ -191,7 +192,7 @@ MeshManager::queueForImage( Diamond* d, float priority )
         else if ( _bathyLayer.valid() )
         {
             d->_imageRequest = new ElevationLayerRequest( _bathyLayer.get(), d->_key );
-            _imageService->add( d->_imageRequest.get() );
+            _taskService->add( d->_imageRequest.get() );
             _imageQueue.push_back( DiamondJob( d, priority ) );
             d->_queuedForImage = true;
         }
@@ -199,7 +200,7 @@ MeshManager::queueForImage( Diamond* d, float priority )
         else if ( _map.valid() )
         {
             d->_imageRequest = new ElevationRequest( _map.get(), d->_key );
-            _imageService->add( d->_imageRequest.get() );
+            _taskService->add( d->_imageRequest.get() );
             _imageQueue.push_back( DiamondJob( d, priority ) );
             d->_queuedForImage = true;
         }

@@ -57,11 +57,11 @@ typedef int            TravNumber;     // mesh traversal number
 //#define OUTLINE_TEXTURES
 
 // the highest LOD level at which diamond splits can occur:
-#define MAX_ACTIVE_LEVEL 18
+#define MAX_ACTIVE_LEVEL 17
 
 // maximum number of split, merge, and image jobs to complete per UPDATE frame
 // (todo: replace with time quota)
-#define MAX_JOBS_PER_FRAME 10
+#define MAX_JOBS_PER_FRAME 6
 
 // multiple this # by the diamond bounding sphere radius for switch-in/out distance:
 #define CULL_RANGE_FACTOR 2
@@ -70,7 +70,7 @@ typedef int            TravNumber;     // mesh traversal number
 //#define CULL_BACK_FACING_DIAMONDS
 
 // density of each AMR patch (number of rows/cols)
-#define AMR_PATCH_ROWS 16
+#define AMR_PATCH_ROWS 32
 
 // whether to use the geodetic manifold (or the cube manifold, the default)
 //#define USE_GEODETIC_MANIFOLD 1

@@ -19,117 +19,6 @@
 
 // --------------------------------------------------------------------------
 
-static char source_xyzToLatLonHeight[] =
-
-"vec3 xyz_to_lat_lon_height(in vec3 xyz) \n"
-"{ \n"
-"   float X = xyz.x; \n"
-"   float Y = xyz.y; \n"
-"   float Z = xyz.z; \n"
-"   float _radiusEquator = 6378137.0; \n"
-"   float _radiusPolar   = 6356752.3142; \n"
-"   float flattening = (_radiusEquator-_radiusPolar)/_radiusEquator;\n"
-"   float _eccentricitySquared = 2*flattening - flattening*flattening;\n"
-"   float p = sqrt(X*X + Y*Y);\n"
-"   float theta = atan(Z*_radiusEquator , (p*_radiusPolar));\n"
-"   float eDashSquared = (_radiusEquator*_radiusEquator - _radiusPolar*_radiusPolar)/(_radiusPolar*_radiusPolar);\n"
-"   float sin_theta = sin(theta);\n"
-"   float cos_theta = cos(theta);\n"
-"\n"
-"   float latitude = atan( (Z + eDashSquared*_radiusPolar*sin_theta*sin_theta*sin_theta), (p - _eccentricitySquared*_radiusEquator*cos_theta*cos_theta*cos_theta) );\n"
-"   float longitude = atan(Y,X);\n"
-"   float sin_latitude = sin(latitude);\n"
-"   float N = _radiusEquator / sqrt( 1.0 - _eccentricitySquared*sin_latitude*sin_latitude);\n"
-"   float height = p/cos(latitude) - N;\n"
-"   return vec3(longitude, latitude, height);\n"
-"}\n";
-
-static char source_geodeticToXYZ[] =
-
-"vec3 geodeticToXYZ(in vec3 geodetic) \n"
-"{ \n"
-"  float RADIUS_EQUATOR = 6378137.0; \n"
-"  float RADIUS_POLAR   = 6356752.3142; \n"
-"  float FLATTENING     = (RADIUS_EQUATOR-RADIUS_POLAR)/RADIUS_EQUATOR; \n"
-"  float ECC2           = (2.0*FLATTENING) - (FLATTENING*FLATTENING); \n"
-"\n"
-"  float lat = geodetic.y; \n"
-"  float lon = geodetic.x; \n"
-"  float alt = geodetic.z; \n"
-"  float sinLat = sin(lat); \n"
-"  float cosLat = cos(lat); \n"
-"  float n = RADIUS_EQUATOR / sqrt( 1.0 - ECC2*sinLat*sinLat ); \n"
-"  float x = (n+alt)*cosLat*cos(lon); \n"
-"  float y = (n+alt)*cosLat*sin(lon); \n"
-"  float z = (n*(1.0 - ECC2) + alt) * sinLat; \n"
-"  return vec3(x,y,z); \n"
-"} \n";
-
-static char source_rotVecToGeodetic[] =
-
-"vec3 rotVecToGeodetic(in vec3 r) \n"
-"{ \n"
-"  float latitude = -asin(r.y); \n"
-"  float longitude = (r.x*r.x + r.z*r.z < 0.0005 ) ? 0.0 : atan2(r.x,r.z); \n"
-"  return vec3( longitude, latitude, 0.0 ); \n"
-"} \n";
-
-// --------------------------------------------------------------------------
-
-static char source_slerp[] =
-
-"vec3 slerp(in vec3 p0, in vec3 p1, in float t) \n"
-"{ \n"
-"   float theta = acos( dot(p0,p1) ); \n"
-"   vec3 s = ( (p0*sin(1.0-t)*theta) + p1*sin(t*theta) ) / sin(theta); \n"
-"   return s * ( length(p0)+length(p1) ) * 0.5; \n"
-"} \n";
-
-// --------------------------------------------------------------------------
-
-static char source_fnormal[] = 
-
-"vec3 fnormal(void)\n"
-"{\n"
-"    //Compute the normal \n"
-"    vec3 normal = gl_NormalMatrix * gl_Normal; \n"
-"    normal = normalize(normal); \n"
-"    return normal; \n"
-"}\n";
-
-// --------------------------------------------------------------------------
-
-static char source_directionalLight[] = 
-
-"void directionalLight(in int i, \n"
-"                      in vec3 normal, \n"
-"                      inout vec4 ambient, \n"
-"                      inout vec4 diffuse, \n"
-"                      inout vec4 specular) \n"
-"{ \n"
-"   float nDotVP;         // normal . light direction \n"
-"   float nDotHV;         // normal . light half vector \n"
-"   float pf;             // power factor \n"
-" \n"
-"   nDotVP = max(0.0, dot(normal, normalize(vec3 (gl_LightSource[i].position)))); \n"
-"   nDotHV = max(0.0, dot(normal, vec3 (gl_LightSource[i].halfVector))); \n"
-" \n"
-"   if (nDotVP == 0.0) \n"
-"   { \n"
-"       pf = 0.0; \n"
-"   } \n"
-"   else \n"
-"   { \n"
-"       pf = pow(nDotHV, gl_FrontMaterial.shininess); \n"
-" \n"
-"   } \n"
-"   ambient  += gl_LightSource[i].ambient; \n"
-"   diffuse  += gl_LightSource[i].diffuse * nDotVP; \n"
-"   specular += gl_LightSource[i].specular * pf; \n"
-"} \n";
-
-// --------------------------------------------------------------------------
-
 #ifdef USE_IMAGE_MASK
 
 // The mask-based approach:
@@ -218,15 +107,14 @@ char source_fragShaderMain[] =
 
 static char source_vertShaderMain_geocentricMethod[] =
 
-"uniform sampler2D tex0; \n"
 "uniform mat4 osg_ViewMatrixInverse; \n"
+"uniform vec3 v0, v1, v2; \n"                // triangle verts
+"uniform vec2 t0, t1, t2; \n"                // triangle tex coords
+"uniform sampler2D tex0; \n"                 // heightfield encoded into 16 bit texture
 
-"uniform vec3 v0, v1, v2; \n"
-"uniform vec2 t0, t1, t2; \n"
-
-"varying float v_elevation; \n"
-"varying float v_range; \n"
-"varying float v_enorm; \n"
+"varying float v_elevation; \n"              // elevation (HAE) of camera
+"varying float v_range; \n"                  // distance from camera to current vertex
+"varying float v_enorm; \n"                  // normalized terrain height at vertex [0..1]
 "varying vec2 texCoord0; \n"
 "\n"
 "void main (void) \n"
@@ -272,14 +160,13 @@ char source_fragShaderMain[] =
 "    return r0 + vr * (r1-r0); \n"
 "} \n"
 
-"varying float v_elevation; \n"
-"varying float v_range; \n"
-"varying float v_enorm; \n"
+"varying float v_elevation; \n"              // elevation (HAE) of camera
+"varying float v_range; \n"                  // distance from camera to current vertex
+"varying float v_enorm; \n"                  // normalized terrain height at vertex [0..1]
 
 "varying vec2 texCoord0; \n"
-"uniform sampler2D tex0, tex1; \n"
-"uniform float osg_FrameTime; \n"
-"\n"
+"uniform sampler2D tex1; \n"                 // intensity texture (water surface)
+
 "void main (void) \n"
 "{ \n"
 // baseline ocean color

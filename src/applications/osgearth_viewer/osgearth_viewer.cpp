@@ -333,9 +333,9 @@ main(int argc, char** argv)
 
     bool useAutoClip  = arguments.read( "--autoclip" );
     bool useSky       = arguments.read( "--sky" );
+    s_ocean           = arguments.read( "--ocean" );
     s_dms             = arguments.read( "--dms" );
     s_mgrs            = arguments.read( "--mgrs" );
-    s_ocean           = arguments.read( "--ocean" );
 
     std::string kmlFile;
     arguments.read( "--kml", kmlFile );
@@ -375,17 +375,24 @@ main(int argc, char** argv)
                 root->addChild( s_sky );
             }
 
-            if ( externals.hasChild("autoclip") )
-                useAutoClip = externals.child("autoclip").boolValue( useAutoClip );
-
-            // the AutoClipPlaneHandler will automatically adjust the near/far clipping
-            // planes based on your view of the horizon. This prevents near clipping issues
-            // when you are very close to the ground. If your app never brings a user very
-            // close to the ground, you may not need this.
-            if ( useAutoClip )
+            // Ocean surface.
+            if ( s_ocean )
             {
-                //viewer.getCamera()->addEventCallback( new AutoClipPlaneCallback() );
-                viewer.getCamera()->addCullCallback( new AutoClipPlaneCallback2(mapNode->getMap()) );
+                osg::Node* oceanNode = OceanSurface::loadOceanSurface( mapNode->getMap() );
+                root->addChild( oceanNode );
+            }
+
+            if ( externals.hasChild("autoclip") )
+            {
+                useAutoClip = externals.child("autoclip").boolValue( useAutoClip );
+            }
+
+            // the AutoClipPlaneCallback will automatically adjust the near/far clipping
+            // planes based on your view of the horizon. This prevents near clipping issues
+            // when you are very close to the ground.
+            if ( s_sky || s_ocean || useAutoClip )
+            {
+                viewer.getCamera()->addCullCallback( new AutoClipPlaneCallback(mapNode->getMap()) );
             }
         }
 
@@ -421,13 +428,6 @@ main(int argc, char** argv)
                 KMLUIBuilder uibuilder( ControlCanvas::get(&viewer) );
                 root->accept( uibuilder );                
             }
-        }
-
-        // Load an ocean surface if requested
-        if ( s_ocean )
-        {
-            osg::Node* oceanNode = OceanSurface::loadOceanSurface( mapNode->getMap() );
-            root->addChild( oceanNode );
         }
     }
 

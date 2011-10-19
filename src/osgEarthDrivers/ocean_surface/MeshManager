@@ -129,7 +129,7 @@ public:
     CullSettings _cullSettings;
     int _maxJobsPerFrame;
 
-    osg::ref_ptr<TaskService> _imageService;  // service to load textures.
+    osg::ref_ptr<TaskService> _taskService;  // service to load data from the map
 
     osg::ref_ptr<osg::Geode>    _amrGeode;    // geode that hold the AMRGeometry
     osg::ref_ptr<AMRGeometry>   _amrGeom;     // virtual geometry node

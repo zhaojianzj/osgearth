@@ -143,13 +143,6 @@ _textColor( 1,1,0,1 )
         new osg::Depth( osg::Depth::ALWAYS ), 
         osg::StateAttribute::ON | osg::StateAttribute::PROTECTED );
     set->setMode( GL_LIGHTING, 0 );
-
-    //osg::Program* program = new osg::Program();
-    //program->addShader( new osg::Shader( osg::Shader::VERTEX, s_vertexShader ) );
-    //program->addShader( new osg::Shader( osg::Shader::FRAGMENT, s_fragmentShader ) );
-    //set->setAttributeAndModes( program, osg::StateAttribute::ON );
-
-    this->addEventCallback( new AutoClipPlaneCallback( _map.get() ) );
 }
 
 void
