@@ -41,7 +41,7 @@ _options   ( options )
 
     this->setInitialBound( _manifold->initialBound() );
 
-    this->addChild( _mesh->_amrGeode.get() );
+    //this->addChild( _mesh->_amrGeode.get() );
 
     osg::StateSet* sset = this->getOrCreateStateSet();
     sset->setMode( GL_LIGHTING, 0 );
@@ -70,21 +70,11 @@ DRoamNode::traverse( osg::NodeVisitor& nv )
 
         _manifold->cull( cv );
 
-        // I know is not strictly kosher to modify the scene graph from the CULL traversal. But
-        // we need frame-coherence, and our one Drawable is marked DYNAMIC so it should be safe.
         _mesh->_amrGeom->setDrawList( _mesh->_amrDrawList );
-        _mesh->_amrGeode->dirtyBound();
 
-#ifdef DISABLE_NEAR_FAR
-        osg::CullSettings::ComputeNearFarMode saveMode = cv->getComputeNearFarMode();
-        cv->setComputeNearFarMode( osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR );
-#endif
-
-        osg::Group::traverse( nv );
-
-#ifdef DISABLE_NEAR_FAR
-        cv->setComputeNearFarMode( saveMode );
-#endif
+        cv->pushStateSet( _mesh->_amrGeom->getStateSet() );
+        cv->addDrawable( _mesh->_amrGeom.get(), cv->getModelViewMatrix() );
+        cv->popStateSet();
     }
     else
     {

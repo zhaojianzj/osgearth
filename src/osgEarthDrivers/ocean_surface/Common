@@ -61,7 +61,7 @@ typedef int            TravNumber;     // mesh traversal number
 
 // maximum number of split, merge, and image jobs to complete per UPDATE frame
 // (todo: replace with time quota)
-#define MAX_JOBS_PER_FRAME 6
+#define MAX_JOBS_PER_FRAME 5 // 10
 
 // multiple this # by the diamond bounding sphere radius for switch-in/out distance:
 #define CULL_RANGE_FACTOR 2

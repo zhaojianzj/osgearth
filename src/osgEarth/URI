@@ -159,6 +159,8 @@ namespace osgEarth
         bool operator == ( const URI& rhs ) const;
 
         bool operator != ( const URI& rhs ) const;
+        
+        bool operator < ( const URI& rhs ) const { return _fullURI < rhs._fullURI; }
 
     public: // convenience reader methods
 

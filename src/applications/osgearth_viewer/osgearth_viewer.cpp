@@ -405,6 +405,9 @@ main(int argc, char** argv)
             }
 
             // Ocean surface.
+            if ( externals.hasChild( "ocean" ) )
+                useOcean = true;
+
             if ( useOcean )
             {
                 OceanSurfaceOptions ocean_opts;
@@ -469,6 +472,16 @@ main(int argc, char** argv)
     viewer.getDatabasePager()->setDoPreCompile( true );
 
     viewer.setSceneData( root );
+
+    std::string pathfile;
+    while( arguments.read("-p",pathfile) )
+    {
+        osgGA::AnimationPathManipulator* apm = new osgGA::AnimationPathManipulator(pathfile);
+        if (apm || !apm->valid())
+        {
+            viewer.setCameraManipulator( apm );
+        }
+    }
 
     // add some stock OSG handlers:
     viewer.addEventHandler(new osgViewer::StatsHandler());

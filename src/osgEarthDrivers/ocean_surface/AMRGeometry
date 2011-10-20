@@ -30,7 +30,6 @@ class MeshNode
 public:
     osg::Vec3d _manifoldCoord;   // source coordinate (in manifold srs)
     osg::Vec3d _geodeticCoord;   // source coordinate (in lon/lat/alt)
-    //osg::Vec3f _vertex;          // world space vertex
     osg::Vec3d _vertex;          // world space vertex
     osg::Vec3f _normal;          // world space normal
 
@@ -96,6 +95,10 @@ public:
     void setDrawList( const AMRDrawableList& drawList );
 
 protected:
+
+    /** compiles the buffer objects */
+    virtual void compileGLObjects( osg::RenderInfo& renderInfo ) const;
+
     /** renders the draw list. */
     virtual void drawImplementation( osg::RenderInfo& renderInfo ) const;
 
@@ -105,19 +108,10 @@ public:
 
     // the adaptive refinement pattern that is permanently stores in the VBO.
     // in the future we may support more than one pattern (for LOD matching, e.g.)
-    //typedef std::vector< osg::ref_ptr<osg::DrawElements> > Pattern;
-    //Pattern _pattern;
-    osg::ref_ptr<osg::DrawElementsUShort> _pattern;
-    int _numPatternVerts;
-    int _numPatternElements;
-    int _numPatternStrips;
-    int _numPatternTriangles;
-    
-    osg::ref_ptr<osg::Vec3Array>           _verts;
-    osg::ref_ptr<osg::Vec2Array>           _texCoords;
-    osg::ref_ptr<osg::VertexBufferObject>  _patternVBO;
-    osg::ref_ptr<osg::ElementBufferObject> _patternEBO;
-    osg::ref_ptr<osg::Uniform>             _seaLevelUniform;
+    osg::ref_ptr<osg::DrawElementsUShort> _pattern;    
+    osg::ref_ptr<osg::Vec3Array>          _verts;
+    osg::ref_ptr<osg::Vec2Array>          _texCoords;
+    osg::ref_ptr<osg::Uniform>            _seaLevelUniform;
 
 public: // temp
     // shader program that draws the virtual geometry

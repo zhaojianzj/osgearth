@@ -77,6 +77,10 @@ struct ReaderWriterOceanSurface : public osgDB::ReaderWriter
             node->apply( *osOptions );
             return ReadResult( node.get() );
         }
+        else
+        {
+            return ReadResult();
+        }
     }
 
     Threading::PerObjectMap<MapNode*, osg::observer_ptr<DRoamNode> > _oceans;

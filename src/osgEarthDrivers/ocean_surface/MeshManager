@@ -27,7 +27,6 @@
 #include <osgEarth/Map>
 #include <osgEarth/ImageLayer>
 #include <osgEarth/TaskService>
-#include <osg/Geode>
 #include <osg/Geometry>
 #include <osg/Texture2D>
 #include <queue>
@@ -142,7 +141,6 @@ public:
 
     osg::ref_ptr<TaskService> _taskService;  // service to load data from the map
 
-    osg::ref_ptr<osg::Geode>    _amrGeode;    // geode that hold the AMRGeometry
     osg::ref_ptr<AMRGeometry>   _amrGeom;     // virtual geometry node
     AMRDrawableList             _amrDrawList; // culling result
 

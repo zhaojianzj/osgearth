@@ -113,6 +113,8 @@ AMRGeometry::AMRGeometry()
     _seaLevelUniform = new osg::Uniform( osg::Uniform::FLOAT, "seaLevel" );
     _seaLevelUniform->set( 0.0f );
     this->getOrCreateStateSet()->addUniform( _seaLevelUniform.get() );
+
+    this->_supportsVertexBufferObjects = true;
 }
 
 AMRGeometry::AMRGeometry( const AMRGeometry& rhs, const osg::CopyOp& op ) :
@@ -212,21 +214,14 @@ toBarycentric(const osg::Vec3& p1, const osg::Vec3& p2, const osg::Vec3& p3,
 void
 AMRGeometry::initPatterns()
 {
-    _numPatternVerts = 0;
-    _numPatternElements = 0;
-    _numPatternStrips = 0;
-    _numPatternTriangles = 0;
-
     this->setUseVertexBufferObjects( true );
     this->setUseDisplayList( false );
 
-    _patternVBO = new osg::VertexBufferObject();
-
     _verts = new osg::Vec3Array();
-    _verts->setVertexBufferObject( _patternVBO.get() );
+    _verts->setVertexBufferObject( new osg::VertexBufferObject() );
 
     _texCoords = new osg::Vec2Array();
-    _texCoords->setVertexBufferObject( _patternVBO.get() );
+    _texCoords->setVertexBufferObject( _verts->getVertexBufferObject() );
  
     // build a right-triangle pattern. (0,0) is the lower-left (90d),
     // (0,1) is the lower right (45d) and (1,0) is the upper-left (45d)
@@ -235,7 +230,6 @@ AMRGeometry::initPatterns()
     for( int r=AMR_PATCH_ROWS-1; r >=0; --r )
     {
         int cols = AMR_PATCH_ROWS-r;
-        //OE_INFO << "ROW " << r << std::endl;
         for( int c=0; c<cols; ++c )
         {
             osg::Vec3 point( (float)c/(float)(AMR_PATCH_ROWS-1), (float)r/(float)(AMR_PATCH_ROWS-1), 0 );
@@ -246,15 +240,9 @@ AMRGeometry::initPatterns()
             _texCoords->push_back( baryTex );
         }
     }
-    _numPatternVerts = _verts->size();
-
-    //unsigned short off = 0;
-    //unsigned short rowptr = off;
-
-    _patternEBO = new osg::ElementBufferObject();
 
     _pattern = new osg::DrawElementsUShort( GL_TRIANGLES );
-    _pattern->setElementBufferObject( _patternEBO.get() );
+    _pattern->setElementBufferObject( new osg::ElementBufferObject() );
 
     unsigned short rowptr = 0;
     for( unsigned short r=1; r<AMR_PATCH_ROWS; ++r )
@@ -274,36 +262,37 @@ AMRGeometry::initPatterns()
                 _pattern->push_back( prev_rowptr + c );
             }
         }
-    }         
+    }  
+}
 
-#if 0
-    for( int r=1; r<AMR_PATCH_ROWS; ++r )
+void
+AMRGeometry::compileGLObjects( osg::RenderInfo& renderInfo ) const
+{
+    osg::State& state = *renderInfo.getState();
+    unsigned int contextID = state.getContextID();
+    osg::GLBufferObject::Extensions* extensions = osg::GLBufferObject::getExtensions(contextID, true);
+    if (!extensions) 
+        return;
+
+    typedef std::set<osg::BufferObject*> BufferObjects;
+    BufferObjects bufferObjects;
+
+    bufferObjects.insert( _verts->getBufferObject() );
+    bufferObjects.insert( _pattern->getBufferObject() );
+
+    for(BufferObjects::iterator itr = bufferObjects.begin(); itr != bufferObjects.end(); ++itr)
     {
-        rowptr += r;
-        osg::DrawElementsUInt* e = new osg::DrawElementsUInt( GL_TRIANGLE_STRIP );
-        e->setElementBufferObject( _patternEBO.get() );            
-
-        for( int c=0; c<=r; ++c )
+        osg::GLBufferObject* glBufferObject = (*itr)->getOrCreateGLBufferObject(contextID);
+        if (glBufferObject && glBufferObject->isDirty())
         {
-            e->push_back( rowptr + c );               
-            if ( c < r )
-                e->push_back( rowptr + c - r );
+            // OSG_NOTICE<<"Compile buffer "<<glBufferObject<<std::endl;
+            glBufferObject->compileBuffer();
         }
-        OE_INFO << std::endl;
-        _pattern.push_back( e );
-
-        _numPatternStrips++;
-        _numPatternElements += e->size();
-        _numPatternTriangles += (e->size()-1)/2;     
     }
-    OE_DEBUG << LC
-        << "Pattern: "   << std::dec
-        << "verts="      << _numPatternVerts
-        << ", strips="   << _numPatternStrips
-        << ", tris="     << _numPatternTriangles
-        << ", elements=" << _numPatternElements
-        << std::endl;
-#endif
+
+    // unbind the BufferObjects
+    extensions->glBindBuffer(GL_ARRAY_BUFFER_ARB,0);
+    extensions->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER_ARB,0);
 }
 
 static int s_numTemplates = 0;
@@ -322,7 +311,9 @@ AMRGeometry::drawImplementation( osg::RenderInfo& renderInfo ) const
     // this will enable the amr geometry's stateset (and activate the Program)
     state.pushStateSet( this->getStateSet() );
 
+#ifdef LOCALIZE_VERTS
     osg::Matrixd modelView = state.getModelViewMatrix();
+#endif
 
     int numTemplates = 0;
 
@@ -346,14 +337,6 @@ AMRGeometry::drawImplementation( osg::RenderInfo& renderInfo ) const
             state.applyModelViewAndProjectionUniformsIfRequired();
 #endif // LOCALIZE_VERTS
 
-#if 0
-            // render the pattern (a collection of primitive sets)
-            for( Pattern::const_iterator p = _pattern.begin(); p != _pattern.end(); ++p )
-            {
-                p->get()->draw( state, true );
-            }
-#endif
-
             _pattern->draw( state, true );
 
             numTemplates++;
@@ -362,6 +345,7 @@ AMRGeometry::drawImplementation( osg::RenderInfo& renderInfo ) const
         state.popStateSet();
     }
 
+#if 0
     if ( s_numTemplates != numTemplates )
     {
         s_numTemplates = numTemplates;
@@ -373,6 +357,7 @@ AMRGeometry::drawImplementation( osg::RenderInfo& renderInfo ) const
             << ", elements=" << numTemplates*_numPatternElements
             << std::endl;
     }
+#endif
 
     // unbind the buffer objects.
     state.unbindVertexBufferObject();
