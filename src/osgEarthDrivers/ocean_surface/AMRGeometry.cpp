@@ -248,11 +248,35 @@ AMRGeometry::initPatterns()
     }
     _numPatternVerts = _verts->size();
 
-    unsigned short off = 0;
-    unsigned short rowptr = off;
+    //unsigned short off = 0;
+    //unsigned short rowptr = off;
 
     _patternEBO = new osg::ElementBufferObject();
 
+    _pattern = new osg::DrawElementsUShort( GL_TRIANGLES );
+    _pattern->setElementBufferObject( _patternEBO.get() );
+
+    unsigned short rowptr = 0;
+    for( unsigned short r=1; r<AMR_PATCH_ROWS; ++r )
+    {
+        unsigned short prev_rowptr = rowptr;
+        rowptr += r;
+        for( unsigned short c=0; c<r; ++c )
+        {
+            _pattern->push_back( rowptr + c );
+            _pattern->push_back( prev_rowptr + c );
+            _pattern->push_back( rowptr + c + 1 );
+
+            if ( c+1 < r )
+            {
+                _pattern->push_back( prev_rowptr + c + 1 );
+                _pattern->push_back( rowptr + c + 1 );
+                _pattern->push_back( prev_rowptr + c );
+            }
+        }
+    }         
+
+#if 0
     for( int r=1; r<AMR_PATCH_ROWS; ++r )
     {
         rowptr += r;
@@ -272,7 +296,6 @@ AMRGeometry::initPatterns()
         _numPatternElements += e->size();
         _numPatternTriangles += (e->size()-1)/2;     
     }
-
     OE_DEBUG << LC
         << "Pattern: "   << std::dec
         << "verts="      << _numPatternVerts
@@ -280,6 +303,7 @@ AMRGeometry::initPatterns()
         << ", tris="     << _numPatternTriangles
         << ", elements=" << _numPatternElements
         << std::endl;
+#endif
 }
 
 static int s_numTemplates = 0;
@@ -322,11 +346,15 @@ AMRGeometry::drawImplementation( osg::RenderInfo& renderInfo ) const
             state.applyModelViewAndProjectionUniformsIfRequired();
 #endif // LOCALIZE_VERTS
 
+#if 0
             // render the pattern (a collection of primitive sets)
             for( Pattern::const_iterator p = _pattern.begin(); p != _pattern.end(); ++p )
             {
                 p->get()->draw( state, true );
             }
+#endif
+
+            _pattern->draw( state, true );
 
             numTemplates++;
         }

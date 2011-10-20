@@ -105,8 +105,9 @@ public:
 
     // the adaptive refinement pattern that is permanently stores in the VBO.
     // in the future we may support more than one pattern (for LOD matching, e.g.)
-    typedef std::vector< osg::ref_ptr<osg::DrawElements> > Pattern;
-    Pattern _pattern;
+    //typedef std::vector< osg::ref_ptr<osg::DrawElements> > Pattern;
+    //Pattern _pattern;
+    osg::ref_ptr<osg::DrawElementsUShort> _pattern;
     int _numPatternVerts;
     int _numPatternElements;
     int _numPatternStrips;
