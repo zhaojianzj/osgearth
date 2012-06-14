@@ -55,6 +55,8 @@
 #include <osgEarthUtil/ShadowUtils>
 #include <osgEarth/NodeUtils>
 
+#define VDSM_PATCH 1
+
 using namespace osgEarth;
 using namespace osgEarth::Util;
 
@@ -360,8 +362,10 @@ int main(int argc, char** argv)
         shadowedScene->setShadowSettings(settings);
 
         while( arguments.read("--debugHUD") ) settings->setDebugDraw( true );
+#ifndef VDSM_PATCH
         if (arguments.read("--persp")) settings->setShadowMapProjectionHint(osgShadow::ShadowSettings::PERSPECTIVE_SHADOW_MAP);
         if (arguments.read("--ortho")) settings->setShadowMapProjectionHint(osgShadow::ShadowSettings::ORTHOGRAPHIC_SHADOW_MAP);
+#endif
 
         unsigned int unit=1;
         if (arguments.read("--unit",unit)) settings->setBaseShadowTextureUnit(unit);
@@ -371,9 +375,10 @@ int main(int argc, char** argv)
 
         unsigned int numShadowMaps;
         if (arguments.read("--num-sm",numShadowMaps)) settings->setNumShadowMapsPerLight(numShadowMaps);
-
+#ifndef VDSM_PATCH
         if (arguments.read("--parallel-split") || arguments.read("--ps") ) settings->setMultipleShadowMapHint(osgShadow::ShadowSettings::PARALLEL_SPLIT);
         if (arguments.read("--cascaded")) settings->setMultipleShadowMapHint(osgShadow::ShadowSettings::CASCADED);
+#endif
 
 
         int mapres = 1024;
