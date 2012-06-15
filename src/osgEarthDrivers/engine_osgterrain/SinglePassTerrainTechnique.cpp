@@ -1616,9 +1616,29 @@ SinglePassTerrainTechnique::createGeometry( const TileFrame& tilef )
     
     osg::ref_ptr<osg::Vec3Array> skirtVectors = new osg::Vec3Array( *normals );
 
-          if (!normals)
+    if (!normals)
         createSkirt = false;
     
+    struct SkirtParams
+    {
+        int base;
+        int stride;
+        int end;
+        SkirtParams(int base_, int stride_, int end_)
+            : base(base_), stride(stride_), end(end_)
+        {
+        }
+    };
+    SkirtParams skirtParams[4] = {
+        // bottom:
+        SkirtParams(0, 1, numColumns - 1),
+        // right:
+        SkirtParams(numColumns - 1, numColumns, (numRows - 1) * numColumns + numColumns - 1),
+        // top:
+        SkirtParams((numRows-1)*numColumns + numColumns - 1, -1, (numRows-1)*numColumns),
+        // left:
+        SkirtParams((numRows-1)*numColumns, -numColumns, -numColumns)
+    };
     // New separated skirts.
     if ( createSkirt )
     {        
@@ -1632,144 +1652,48 @@ SinglePassTerrainTechnique::createGeometry( const TileFrame& tilef )
         Indices skirtBreaks;
         skirtBreaks.push_back(0);
 
-        // bottom:
-        for( unsigned int c=0; c<numColumns-1; ++c )
+        for (int skirtIdx = 0; skirtIdx < 4; ++skirtIdx)
         {
-            int orig_i = indices[c];
-
-            //int offset = 0;
-            //while (orig_i < 0 && offset < numRows - 1)
-            //  orig_i = indices[c + ++offset * numColumns];
-
-            if (orig_i < 0)
+            for(  int idx = skirtParams[skirtIdx].base;
+                  idx != skirtParams[skirtIdx].end;
+                  idx += skirtParams[skirtIdx].stride )
             {
-              if (skirtBreaks.back() != skirtVerts->size())
-                skirtBreaks.push_back(skirtVerts->size());
-            }
-            else
-            {
-              skirtVerts->push_back( (*surfaceVerts)[orig_i] );
-              skirtVerts->push_back( (*surfaceVerts)[orig_i] - ((*skirtVectors)[orig_i])*skirtHeight );
-              skirtNormals->push_back( (*normals)[orig_i] );             
-              skirtNormals->push_back( (*normals)[orig_i] );             
+                int orig_i = indices[idx];
+
+                //int offset = 0;
+                //while (orig_i < 0 && offset < numRows - 1)
+                //  orig_i = indices[c + ++offset * numColumns];
+
+                if (orig_i < 0)
+                {
+                    if (skirtBreaks.back() != skirtVerts->size())
+                        skirtBreaks.push_back(skirtVerts->size());
+                }
+                else
+                {
+                    skirtVerts->push_back( (*surfaceVerts)[orig_i] );
+                    skirtVerts->push_back( (*surfaceVerts)[orig_i] - ((*skirtVectors)[orig_i])*skirtHeight );
+                    skirtNormals->push_back( (*normals)[orig_i] );             
+                    skirtNormals->push_back( (*normals)[orig_i] );             
 
 
-              if ( _texCompositor->requiresUnitTextureSpace() )
-              {
-                  unifiedSkirtTexCoords->push_back( (*unifiedSurfaceTexCoords)[orig_i] );
-                  unifiedSkirtTexCoords->push_back( (*unifiedSurfaceTexCoords)[orig_i] );
-              }
-              else if ( renderLayers.size() > 0 )
-              {
-                  for (unsigned int i = 0; i < renderLayers.size(); ++i)
-                  {
-                      const osg::Vec2& tc = (*renderLayers[i]._texCoords.get())[orig_i];
-                      renderLayers[i]._skirtTexCoords->push_back( tc );
-                      renderLayers[i]._skirtTexCoords->push_back( tc );
-                  }
-              }
-            }
+                    if ( _texCompositor->requiresUnitTextureSpace() )
+                    {
+                        unifiedSkirtTexCoords->push_back( (*unifiedSurfaceTexCoords)[orig_i] );
+                        unifiedSkirtTexCoords->push_back( (*unifiedSurfaceTexCoords)[orig_i] );
+                    }
+                    else if ( renderLayers.size() > 0 )
+                    {
+                        for (unsigned int i = 0; i < renderLayers.size(); ++i)
+                        {
+                            const osg::Vec2& tc = (*renderLayers[i]._texCoords.get())[orig_i];
+                            renderLayers[i]._skirtTexCoords->push_back( tc );
+                            renderLayers[i]._skirtTexCoords->push_back( tc );
+                        }
+                    }
+                }
+            }            
         }
-
-        // right:
-        for( unsigned int r=0; r<numRows-1; ++r )
-        {
-            int orig_i = indices[r*numColumns+(numColumns-1)];
-            if (orig_i < 0)
-            {
-              if (skirtBreaks.back() != skirtVerts->size())
-                skirtBreaks.push_back(skirtVerts->size());
-            }
-            else
-            {
-              skirtVerts->push_back( (*surfaceVerts)[orig_i] );
-              skirtVerts->push_back( (*surfaceVerts)[orig_i] - ((*skirtVectors)[orig_i])*skirtHeight );
-              skirtNormals->push_back( (*normals)[orig_i] );             
-              skirtNormals->push_back( (*normals)[orig_i] );             
-
-              if ( _texCompositor->requiresUnitTextureSpace() )
-              {
-                  unifiedSkirtTexCoords->push_back( (*unifiedSurfaceTexCoords)[orig_i] );
-                  unifiedSkirtTexCoords->push_back( (*unifiedSurfaceTexCoords)[orig_i] );
-              }
-              else if ( renderLayers.size() > 0 )
-              {
-                  for (unsigned int i = 0; i < renderLayers.size(); ++i)
-                  {
-                      const osg::Vec2& tc = (*renderLayers[i]._texCoords.get())[orig_i];
-                      renderLayers[i]._skirtTexCoords->push_back( tc );
-                      renderLayers[i]._skirtTexCoords->push_back( tc );
-                  }
-              }
-            }
-        }
-
-        // top:
-        for( int c=numColumns-1; c>0; --c )
-        {
-            int orig_i = indices[(numRows-1)*numColumns+c];
-            if (orig_i < 0)
-            {
-              if (skirtBreaks.back() != skirtVerts->size())
-                skirtBreaks.push_back(skirtVerts->size());
-            }
-            else
-            {
-              skirtVerts->push_back( (*surfaceVerts)[orig_i] );
-              skirtVerts->push_back( (*surfaceVerts)[orig_i] - ((*skirtVectors)[orig_i])*skirtHeight );
-              skirtNormals->push_back( (*normals)[orig_i] );             
-              skirtNormals->push_back( (*normals)[orig_i] );             
-
-              if ( _texCompositor->requiresUnitTextureSpace() )
-              {
-                  unifiedSkirtTexCoords->push_back( (*unifiedSurfaceTexCoords)[orig_i] );
-                  unifiedSkirtTexCoords->push_back( (*unifiedSurfaceTexCoords)[orig_i] );
-              }
-              else if ( renderLayers.size() > 0 )
-              {
-                  for (unsigned int i = 0; i < renderLayers.size(); ++i)
-                  {
-                      const osg::Vec2& tc = (*renderLayers[i]._texCoords.get())[orig_i];
-                      renderLayers[i]._skirtTexCoords->push_back( tc );
-                      renderLayers[i]._skirtTexCoords->push_back( tc );
-                  }
-              }
-            }
-        }
-
-        // left:
-        for( int r=numRows-1; r>=0; --r )
-        {
-            int orig_i = indices[r*numColumns];
-            if (orig_i < 0)
-            {
-              if (skirtBreaks.back() != skirtVerts->size())
-                skirtBreaks.push_back(skirtVerts->size());
-            }
-            else
-            {
-              skirtVerts->push_back( (*surfaceVerts)[orig_i] );
-              skirtVerts->push_back( (*surfaceVerts)[orig_i] - ((*skirtVectors)[orig_i])*skirtHeight );              
-              skirtNormals->push_back( (*normals)[orig_i] );             
-              skirtNormals->push_back( (*normals)[orig_i] );             
-
-              if ( _texCompositor->requiresUnitTextureSpace() )
-              {
-                  unifiedSkirtTexCoords->push_back( (*unifiedSurfaceTexCoords)[orig_i] );
-                  unifiedSkirtTexCoords->push_back( (*unifiedSurfaceTexCoords)[orig_i] );
-              }
-              else if ( renderLayers.size() > 0 )
-              {
-                  for (unsigned int i = 0; i < renderLayers.size(); ++i)
-                  {
-                      const osg::Vec2& tc = (*renderLayers[i]._texCoords.get())[orig_i];
-                      renderLayers[i]._skirtTexCoords->push_back( tc );
-                      renderLayers[i]._skirtTexCoords->push_back( tc );
-                  }
-              }
-            }
-        }
-
         skirt->setVertexArray( skirtVerts );
         if ( skirtVerts->getVertexBufferObject() )
             skirtVerts->getVertexBufferObject()->setUsage(GL_STATIC_DRAW_ARB);
