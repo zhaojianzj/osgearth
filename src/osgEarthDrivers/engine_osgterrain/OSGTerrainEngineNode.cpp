@@ -885,6 +885,7 @@ OSGTerrainEngineNode::installShaders()
         vp->setShader( "osgearth_frag_applyTexturing",  sf->createDefaultTextureFragmentShader( numLayers ) );
 
         getOrCreateStateSet()->setAttributeAndModes( vp, osg::StateAttribute::ON );
+        getOrCreateStateSet()->getOrCreateUniform("OE_isSkirt", osg::Uniform::BOOL)->set(false);
     }
 }
 

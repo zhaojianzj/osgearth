@@ -30,6 +30,7 @@
 #include <osg/Program>
 #include <osg/Math>
 #include <osg/Timer>
+#include <osg/Uniform>
 #include <osg/Version>
 #include <osgUtil/DelaunayTriangulator>
 #include <osgUtil/Tessellator>
@@ -602,6 +603,7 @@ SinglePassTerrainTechnique::createGeometry( const TileFrame& tilef )
     skirt->setDataVariance( osg::Object::DYNAMIC );
     skirt->setUseDisplayList(false);
     skirt->setUseVertexBufferObjects(true);
+    skirt->getOrCreateStateSet()->getOrCreateUniform("OE_isSkirt", osg::Uniform::BOOL)->set(true);
     geode->addDrawable( skirt );
 
 	osg::ref_ptr<GeoLocator> geoLocator = _masterLocator;
@@ -1644,9 +1646,11 @@ SinglePassTerrainTechnique::createGeometry( const TileFrame& tilef )
     {        
         // build the verts first:
         osg::Vec3Array* skirtVerts = new osg::Vec3Array();
+        osg::Vec3Array* skirtShadowVerts = new osg::Vec3Array();
         osg::Vec3Array* skirtNormals = new osg::Vec3Array();
 
         skirtVerts->reserve( numVerticesInSkirt );
+        skirtShadowVerts->reserve ( numVerticesInSkirt );
         skirtNormals->reserve( numVerticesInSkirt );
         
         Indices skirtBreaks;
@@ -1673,6 +1677,10 @@ SinglePassTerrainTechnique::createGeometry( const TileFrame& tilef )
                 {
                     skirtVerts->push_back( (*surfaceVerts)[orig_i] );
                     skirtVerts->push_back( (*surfaceVerts)[orig_i] - ((*skirtVectors)[orig_i])*skirtHeight );
+                    // Geometry for shadow texture lookup uses
+                    // coordinates of surface.
+                    skirtShadowVerts->push_back( (*surfaceVerts)[orig_i] );
+                    skirtShadowVerts->push_back( (*surfaceVerts)[orig_i] );
                     skirtNormals->push_back( (*normals)[orig_i] );             
                     skirtNormals->push_back( (*normals)[orig_i] );             
 
@@ -1701,6 +1709,9 @@ SinglePassTerrainTechnique::createGeometry( const TileFrame& tilef )
         skirt->setNormalArray( skirtNormals );
         skirt->setNormalBinding( osg::Geometry::BIND_PER_VERTEX );
 
+        skirt->setVertexAttribArray( 12, skirtShadowVerts );
+        skirt->setVertexAttribBinding( 12, osg::Geometry::BIND_PER_VERTEX );
+        
         //Add a primative set for each continuous skirt strip
         skirtBreaks.push_back(skirtVerts->size());
         for (int p=1; p < (int)skirtBreaks.size(); p++)
@@ -1888,8 +1899,11 @@ SinglePassTerrainTechnique::createGeometry( const TileFrame& tilef )
 
     MeshConsolidator::convertToTriangles( *surface );
 
+    // consolidator will blow away the shadow coords
+#if 0
     if ( skirt )
         MeshConsolidator::convertToTriangles( *skirt );
+#endif
 
     for (MaskRecordVector::iterator mr = masks.begin(); mr != masks.end(); ++mr)
         MeshConsolidator::convertToTriangles( *((*mr)._geom) );

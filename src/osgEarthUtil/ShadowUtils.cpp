@@ -107,10 +107,13 @@ bool setUpShadows(osgShadow::ShadowedScene* sscene, osg::Group* root)
         }
     }
     std::stringstream buf;
+    buf << "attribute vec3 shadowGeomCoords;\n";
     buf << "varying vec4 colorAmbientEmissive;\n";
+    buf << "uniform bool OE_isSkirt;\n";
     buf << "void osgearth_setupShadowCoords()\n";
     buf << "{\n";
-    buf << "    vec4 position4 = gl_ModelViewMatrix * gl_Vertex;\n";
+    buf << "    vec4 coord = OE_isSkirt ? vec4(shadowGeomCoords, 1.0) : gl_Vertex;\n";
+    buf << "    vec4 position4 = gl_ModelViewMatrix * coord;\n";
     buf << "    gl_TexCoord[" << su << "].s = dot( position4, gl_EyePlaneS[" << su <<"]);\n";
     buf << "    gl_TexCoord[" << su << "].t = dot( position4, gl_EyePlaneT[" << su <<"]);\n";
     buf << "    gl_TexCoord[" << su << "].p = dot( position4, gl_EyePlaneR[" << su <<"]);\n";
@@ -134,6 +137,7 @@ bool setUpShadows(osgShadow::ShadowedScene* sscene, osg::Group* root)
         return false;
     vp->setFunction("osgearth_setupShadowCoords", buf.str(),
                     ShaderComp::LOCATION_VERTEX_POST_LIGHTING);
+    vp->addBindAttribLocation("shadowGeomCoords", 12);
     std::stringstream buf2;
     buf2 <<
         "#version 110 \n"
