@@ -104,6 +104,11 @@ namespace
             _tool->syncToDraggers();
         }
 
+        void onVerticalOffsetChanged(const Dragger* sender, double offset)
+        {
+            _tool->syncToDraggers();
+        }
+
         FeatureManipTool* _tool;
     };
 
@@ -233,6 +238,7 @@ FeatureManipTool::onHit( FeatureSourceIndexNode* index, FeatureID fid, const Eve
             _circle->getOrCreateStateSet()->setAttributeAndModes( new osg::Depth(osg::Depth::ALWAYS,0,1,false) );
 
             _circleEditor = new CircleNodeEditor( _circle.get() );
+            _circleEditor->getPositionDragger()->setModKeyMask(osgGA::GUIEventAdapter::MODKEY_ALT);
             _circleEditor->getPositionDragger()->addPositionChangedCallback( new DraggerCallback(this) );
             _circleEditor->getRadiusDragger()->addPositionChangedCallback( new DraggerCallback(this) );
             _circleEditor->getOrCreateStateSet()->setAttributeAndModes( new osg::Depth(osg::Depth::ALWAYS,0,1,false) );
@@ -297,7 +303,8 @@ void
 FeatureManipTool::syncToDraggers()
 {
     // position the feature based on the circle annotation's draggers:
-    GeoPoint pos = _circleEditor->getPositionDragger()->getPosition();
+    GeoPoint pos;
+    _circleEditor->getPositionDragger()->getOffsetPosition(pos);
     GeoPoint rad = _circleEditor->getRadiusDragger()->getPosition();
 
     pos.makeGeographic();

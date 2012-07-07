@@ -41,6 +41,7 @@ namespace osgEarth
         {
         public:
             virtual void onPositionChanged(const Dragger* sender, const osgEarth::GeoPoint& position) {};
+            virtual void onVerticalOffsetChanged(const Dragger* sender, double offset) {};
             virtual ~PositionChangedCallback() { }
         };
 
@@ -58,6 +59,13 @@ namespace osgEarth
         const osgEarth::GeoPoint& getPosition() const;
 
         void setPosition( const osgEarth::GeoPoint& position, bool fireEvents=true);
+
+        void setVerticalOffset( double offset, bool fireEvents=true );
+
+        void getOffsetPosition(osgEarth::GeoPoint& out_position) const;
+
+        int getModKeyMask() { return _modKeyMask; }
+        void setModKeyMask( int mask ) { _modKeyMask = mask; }
 
 
         void updateTransform(osg::Node* patch = 0);
@@ -83,6 +91,12 @@ namespace osgEarth
         osgEarth::GeoPoint _position;
         bool _dragging;
         bool _hovered;
+        double _verticalOffset;
+        int _modKeyMask;
+        float _startY;
+        double _startAlt;
+        double _startOffset;
+        double _verticalRatio;
         PositionChangedCallbackList _callbacks;
     };
 

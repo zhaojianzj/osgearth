@@ -17,6 +17,7 @@
 * along with this program.  If not, see <http://www.gnu.org/licenses/>
 */
 #include <osgEarth/Draggers>
+#include <osgEarth/GeoMath>
 #include <osgEarth/MapNode>
 #include <osgEarth/Terrain>
 #include <osgEarth/Pickers>
@@ -46,7 +47,9 @@ Dragger::Dragger( MapNode* mapNode):
 _mapNode( mapNode ),
 _position( mapNode->getMapSRS(), 0,0,0, ALTMODE_RELATIVE),
 _dragging(false),
-_hovered(false)
+_hovered(false),
+_verticalOffset(0.0),
+_modKeyMask(-1)
 {
     setNumChildrenRequiringEventTraversal( 1 );
 
@@ -92,6 +95,27 @@ void Dragger::setPosition( const GeoPoint& position, bool fireEvents)
             }
         }
     }
+}
+
+void Dragger::setVerticalOffset( double offset, bool fireEvents )
+{
+  if (_verticalOffset != offset)
+  {
+      _verticalOffset = offset;
+
+      if (fireEvents)
+      {
+          for( PositionChangedCallbackList::iterator i = _callbacks.begin(); i != _callbacks.end(); i++ )
+          {
+              i->get()->onVerticalOffsetChanged(this, _verticalOffset);
+          }
+      }
+  }
+}
+
+void Dragger::getOffsetPosition(GeoPoint& out_position) const
+{
+    out_position.set(_position.getSRS(), _position.x(), _position.y(), _position.z() + _verticalOffset, _position.altitudeMode());
 }
 
 void Dragger::updateTransform(osg::Node* patch)
@@ -174,6 +198,28 @@ bool Dragger::handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& 
         if ( picker.pick( ea.getX(), ea.getY(), hits ) )
         {
             _dragging = true;
+            _startY = ea.getY();
+            _startAlt = _position.alt();
+            _startOffset = _verticalOffset;
+
+            //Calculate the screen-to-world ratio
+            osg::Vec3d world1, world2;
+            if (_mapNode->getTerrain()->getWorldCoordsUnderMouse(view, ea.getX(), ea.getY(), world1) &&
+                _mapNode->getTerrain()->getWorldCoordsUnderMouse(view, ea.getX(), ea.getY() - 1.0f, world2))
+            {
+              osgEarth::GeoPoint mapPoint1;
+              mapPoint1.fromWorld(_mapNode->getMapSRS(), world1);
+
+              osgEarth::GeoPoint mapPoint2;
+              mapPoint2.fromWorld(_mapNode->getMapSRS(), world2);
+
+              _verticalRatio = GeoMath::distance(mapPoint1.vec3d(), mapPoint2.vec3d(), _mapNode->getMapSRS());
+            }
+            else
+            {
+              _verticalRatio = 0;
+            }
+
             aa.requestRedraw();
             return true;
         }
@@ -187,24 +233,43 @@ bool Dragger::handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& 
     {
         if (_dragging)
         {
-            osg::Vec3d world;
-            if ( _mapNode->getTerrain()->getWorldCoordsUnderMouse(view, ea.getX(), ea.getY(), world) )
+            if(_modKeyMask > 0 && ea.getModKeyMask() & _modKeyMask)
             {
-                //Get the absolute mapPoint that they've drug it to.
-                GeoPoint mapPoint;
-                mapPoint.fromWorld( _mapNode->getMapSRS(), world );
-                //_mapNode->getMap()->worldPointToMapPoint(world, mapPoint);
+              //double alt = _startAlt + (ea.getY() - _startY) * _verticalRatio;
 
-                //If the current position is relative, we need to convert the absolute world point to relative.
-                //If the point is absolute then just emit the absolute point.
-                if (_position.altitudeMode() == ALTMODE_RELATIVE)
+              //if (_position.altitudeMode() == ALTMODE_RELATIVE && alt < 0.0)
+              //  alt = 0.0;
+
+              //GeoPoint mapPoint(_mapNode->getMapSRS(), _position.x(), _position.y(), alt, _position.altitudeMode());
+              //setPosition(mapPoint);
+
+              double offset = _startOffset + (ea.getY() - _startY) * _verticalRatio;
+              setVerticalOffset(offset);
+
+              aa.requestRedraw();
+              return true;
+            }
+            else
+            {
+                osg::Vec3d world;
+                if ( _mapNode->getTerrain()->getWorldCoordsUnderMouse(view, ea.getX(), ea.getY(), world) )
                 {
-                    mapPoint.alt() = _position.alt();
-                    mapPoint.altitudeMode() = ALTMODE_RELATIVE;
+                    //Get the absolute mapPoint that they've drug it to.
+                    GeoPoint mapPoint;
+                    mapPoint.fromWorld( _mapNode->getMapSRS(), world );
+                    //_mapNode->getMap()->worldPointToMapPoint(world, mapPoint);
+
+                    //If the current position is relative, we need to convert the absolute world point to relative.
+                    //If the point is absolute then just emit the absolute point.
+                    if (_position.altitudeMode() == ALTMODE_RELATIVE)
+                    {
+                        mapPoint.alt() = _position.alt();
+                        mapPoint.altitudeMode() = ALTMODE_RELATIVE;
+                    }
+                    setPosition( mapPoint );
+                    aa.requestRedraw();
+                    return true;
                 }
-                setPosition( mapPoint );
-                aa.requestRedraw();
-                return true;
             }
         }
     }   
