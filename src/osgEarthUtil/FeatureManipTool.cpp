@@ -236,9 +236,9 @@ FeatureManipTool::onHit( FeatureSourceIndexNode* index, FeatureID fid, const Eve
             const osg::BoundingSphere& bs = manipModel->getBound();
             _circle = new CircleNode( _mapNode, anchorMap, Distance(bs.radius()*1.5), circleStyle, false );
             _circle->getOrCreateStateSet()->setAttributeAndModes( new osg::Depth(osg::Depth::ALWAYS,0,1,false) );
-
+            
             _circleEditor = new CircleNodeEditor( _circle.get() );
-            _circleEditor->getPositionDragger()->setModKeyMask(osgGA::GUIEventAdapter::MODKEY_ALT);
+            _circleEditor->getPositionDragger()->setModKeyMask(osgGA::GUIEventAdapter::MODKEY_CTRL);
             _circleEditor->getPositionDragger()->addPositionChangedCallback( new DraggerCallback(this) );
             _circleEditor->getRadiusDragger()->addPositionChangedCallback( new DraggerCallback(this) );
             _circleEditor->getOrCreateStateSet()->setAttributeAndModes( new osg::Depth(osg::Depth::ALWAYS,0,1,false) );
