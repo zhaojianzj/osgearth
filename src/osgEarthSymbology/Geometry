@@ -1,6 +1,6 @@
 /* -*-c++-*- */
 /* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
- * Copyright 2008-2014 Pelican Mapping
+ * Copyright 2015 Pelican Mapping
  * http://osgearth.org
  *
  * osgEarth is free software; you can redistribute it and/or modify
@@ -158,6 +158,14 @@ namespace osgEarth { namespace Symbology
          */
         bool crop(
             const class Polygon* cropPolygon,
+            osg::ref_ptr<Geometry>& output ) const;
+
+        /**
+         * Creates the union of this geometry with the other geometry, returning
+         * the result in the output parameter. Returns true if the op succeeded.
+         */
+        bool geounion(
+            const Geometry* other,
             osg::ref_ptr<Geometry>& output ) const;
 
         /**

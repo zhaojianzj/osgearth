@@ -1,6 +1,6 @@
 /* -*-c++-*- */
 /* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
- * Copyright 2008-2014 Pelican Mapping
+ * Copyright 2015 Pelican Mapping
  * http://osgearth.org
  *
  * osgEarth is free software; you can redistribute it and/or modify
@@ -91,12 +91,7 @@ _filters          ( filters )
         // Or quote any layers containing spaces for PostgreSQL
         if (driverName == "ESRI Shapefile" || from.find(" ") != std::string::npos)
         {                        
-            std::string delim = "'";  //Use single quotes by default
-            if (driverName.compare("PostgreSQL") == 0)
-            {
-                //PostgreSQL uses double quotes as identifier delimeters
-                delim = "\"";
-            }            
+            std::string delim = "\"";
             from = delim + from + delim;                    
         }
 
@@ -241,7 +236,7 @@ FeatureCursorOGR::readChunk()
             }
             else
             {
-                OE_INFO << LC << "Skipping feature with invalid geometry: " << f->getGeoJSON() << std::endl;
+                OE_DEBUG << LC << "Skipping feature with invalid geometry: " << f->getGeoJSON() << std::endl;
             }
         }
         OGR_F_Destroy( _nextHandleToQueue );
@@ -270,7 +265,7 @@ FeatureCursorOGR::readChunk()
                 }
                 else
                 {
-                    OE_INFO << LC << "Skipping feature with invalid geometry: " << f->getGeoJSON() << std::endl;
+                    OE_DEBUG << LC << "Skipping feature with invalid geometry: " << f->getGeoJSON() << std::endl;
                 }
             }            
             OGR_F_Destroy( handle );

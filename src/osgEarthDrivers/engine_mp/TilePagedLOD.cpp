@@ -1,6 +1,6 @@
 /* -*-c++-*- */
 /* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
-* Copyright 2008-2014 Pelican Mapping
+* Copyright 2015 Pelican Mapping
 * http://osgearth.org
 *
 * osgEarth is free software; you can redistribute it and/or modify
@@ -8,16 +8,20 @@
 * the Free Software Foundation; either version 2 of the License, or
 * (at your option) any later version.
 *
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU Lesser General Public License for more details.
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+* IN THE SOFTWARE.
 *
 * You should have received a copy of the GNU Lesser General Public License
 * along with this program.  If not, see <http://www.gnu.org/licenses/>
 */
 #include "TilePagedLOD"
 #include "TileNodeRegistry"
+#include "MPTerrainEngineNode"
 #include <osg/Version>
 #include <osgEarth/Registry>
 #include <osgEarth/CullingUtils>
@@ -101,7 +105,8 @@ TilePagedLOD::TilePagedLOD(const UID&        engineUID,
 osg::PagedLOD(),
 _engineUID( engineUID ),
 _live     ( live ),
-_dead     ( dead )
+_dead     ( dead ),
+_debug    ( false )
 {
     if ( live )
     {
@@ -227,25 +232,38 @@ TilePagedLOD::traverse(osg::NodeVisitor& nv)
             break;
         case(osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN):
         {
-            float required_range = 0;
-            if (_rangeMode==DISTANCE_FROM_EYE_POINT)
+            osg::ref_ptr<MPTerrainEngineNode> engine;
+            MPTerrainEngineNode::getEngineByUID( _engineUID, engine );
+ 
+            // Compute the required range.
+            float required_range = -1.0;
+            if (engine->getComputeRangeCallback())
+            {                
+                required_range = (*engine->getComputeRangeCallback())(this, nv);
+            }            
+
+            // If we don't have a callback or it return a negative number fallback on the original calculation.
+            if (required_range < 0.0)
             {
-                required_range = nv.getDistanceToViewPoint(getCenter(),true);
-            }
-            else
-            {
-                osg::CullStack* cullStack = dynamic_cast<osg::CullStack*>(&nv);
-                if (cullStack && cullStack->getLODScale()>0.0f)
+                if (_rangeMode==DISTANCE_FROM_EYE_POINT)
                 {
-                    required_range = cullStack->clampedPixelSize(getBound()) / cullStack->getLODScale();
+                    required_range = nv.getDistanceToViewPoint(getCenter(),true);
                 }
                 else
                 {
-                    // fallback to selecting the highest res tile by
-                    // finding out the max range
-                    for(unsigned int i=0;i<_rangeList.size();++i)
+                    osg::CullStack* cullStack = dynamic_cast<osg::CullStack*>(&nv);
+                    if (cullStack && cullStack->getLODScale()>0.0f)
                     {
-                        required_range = osg::maximum(required_range,_rangeList[i].first);
+                        required_range = cullStack->clampedPixelSize(getBound()) / cullStack->getLODScale();
+                    }
+                    else
+                    {
+                        // fallback to selecting the highest res tile by
+                        // finding out the max range
+                        for(unsigned int i=0;i<_rangeList.size();++i)
+                        {
+                            required_range = osg::maximum(required_range,_rangeList[i].first);
+                        }
                     }
                 }
             }
@@ -380,7 +398,20 @@ TilePagedLOD::removeExpiredChildren(double         expiryTime,
             ExpirationCollector collector( _live.get(), _dead.get() );
             nodeToRemove->accept( collector );
 
-            OE_DEBUG << LC << "Expired " << collector._count << std::endl;
+            if ( _debug )
+            {
+                TileNode* tileNode = getTileNode();
+                std::string key = tileNode ? tileNode->getKey().str() : "unk";
+                OE_NOTICE 
+                    << LC << "Tile " << key << " : expiring " << collector._count << " children; "
+                    << "TS = " << _perRangeDataList[cindex]._timeStamp
+                    << ", MET = " << minExpiryTime
+                    << ", ET = " << expiryTime
+                    << "; FN = " << _perRangeDataList[cindex]._frameNumber
+                    << ", MEF = " << minExpiryFrames
+                    << ", EF = " << expiryFrame
+                    << "\n";
+            }
 
             return Group::removeChildren(cindex,1);
         }

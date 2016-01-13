@@ -1,6 +1,6 @@
 /* -*-c++-*- */
 /* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
-* Copyright 2008-2014 Pelican Mapping
+* Copyright 2015 Pelican Mapping
 * http://osgearth.org
 *
 * osgEarth is free software; you can redistribute it and/or modify
@@ -8,25 +8,30 @@
 * the Free Software Foundation; either version 2 of the License, or
 * (at your option) any later version.
 *
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU Lesser General Public License for more details.
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+* IN THE SOFTWARE.
 *
 * You should have received a copy of the GNU Lesser General Public License
 * along with this program.  If not, see <http://www.gnu.org/licenses/>
 */
 
-#include <osgEarth/RTTPicker>
 #include <osgEarth/Registry>
 #include <osgEarth/ShaderGenerator>
 #include <osgEarth/ObjectIndex>
 #include <osgEarthUtil/EarthManipulator>
 #include <osgEarthUtil/ExampleResources>
 #include <osgEarthUtil/Controls>
+#include <osgEarthUtil/RTTPicker>
 #include <osgEarthFeatures/Feature>
 #include <osgEarthFeatures/FeatureIndex>
 #include <osgEarthAnnotation/AnnotationNode>
+
+#include <osgEarth/IntersectionPicker>
 
 #include <osgViewer/CompositeViewer>
 #include <osgGA/TrackballManipulator>
@@ -44,6 +49,53 @@ namespace ui = osgEarth::Util::Controls;
 static ui::LabelControl* s_fidLabel;
 static ui::LabelControl* s_nameLabel;
 static osg::Uniform*     s_highlightUniform;
+
+//-----------------------------------------------------------------------
+
+// Tests the (old) intersection-based picker.
+struct TestIsectPicker : public osgGA::GUIEventHandler
+{
+    bool handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa)
+    {
+        if ( ea.getEventType() == ea.RELEASE )
+        {
+            IntersectionPicker picker(dynamic_cast<osgViewer::View*>(aa.asView()));
+            IntersectionPicker::Hits hits;
+            if(picker.pick(ea.getX(), ea.getY(), hits)) {
+                std::set<ObjectID> oids;
+                if (picker.getObjectIDs(hits, oids)) {
+                    ObjectIndex* index = Registry::objectIndex();
+                    ObjectID oid = *oids.begin();
+                    osg::ref_ptr<FeatureIndex> fi = index->get<FeatureIndex>(oid);
+                    if ( fi.valid() ) {
+                        OE_NOTICE << "Old Picker found OID " << oid << "\n";
+                        Feature* f = fi->getFeature(oid);
+                        if ( f ) {
+                            OE_NOTICE << "...feature ID = " << f->getFID() << "\n";
+                        }
+                    }      
+                    osg::ref_ptr<Feature> f = index->get<Feature>(oid);
+                    if ( f.valid() ) {
+                        OE_NOTICE << "Old Picker found OID " << oid << "\n";
+                        OE_NOTICE << "...feature ID = " << f->getFID() << "\n";
+                    }
+                    osg::ref_ptr<AnnotationNode> a = index->get<AnnotationNode>(oid);
+                    if ( a ) {
+                        OE_NOTICE << "Old Picker found annotation " << a->getName() << "\n";
+                    }
+                }
+                else {
+                    OE_NOTICE << "picked, but no OIDs\n";
+                }
+            }
+            else {
+                OE_NOTICE << "no intersect\n";
+            }
+        }
+        return false;
+    }
+};
+
 
 //-----------------------------------------------------------------------
 
@@ -108,9 +160,9 @@ const char* highlightVert =
     "uniform uint objectid_to_highlight; \n"
     "uint oe_index_objectid;      // Stage global containing object id \n"
     "flat out int selected; \n"
-    "void highlightVertex(inout vec4 vertex) \n"
+    "void checkForHighlight(inout vec4 vertex) \n"
     "{ \n"
-    "    selected = (objectid_to_highlight > uint(1) && objectid_to_highlight == oe_index_objectid) ? 1 : 0; \n"
+    "    selected = (objectid_to_highlight > 1u && objectid_to_highlight == oe_index_objectid) ? 1 : 0; \n"
     "} \n";
 
 const char* highlightFrag =
@@ -126,7 +178,7 @@ void installHighlighter(osg::StateSet* stateSet, int attrLocation)
 {
     // This shader program will highlight the selected object.
     VirtualProgram* vp = VirtualProgram::getOrCreate(stateSet);
-    vp->setFunction( "highlightVertex",    highlightVert, ShaderComp::LOCATION_VERTEX_CLIP, FLT_MAX );
+    vp->setFunction( "checkForHighlight",  highlightVert, ShaderComp::LOCATION_VERTEX_CLIP );
     vp->setFunction( "highlightFragment",  highlightFrag, ShaderComp::LOCATION_FRAGMENT_COLORING );
 
     // Since we're accessing object IDs, we need to load the indexing shader as well:
@@ -232,7 +284,8 @@ main(int argc, char** argv)
     osg::Node* node = MapNodeHelper().load( arguments, mainView, uiContainer );
     if ( node )
     {
-        mainView->setSceneData( node );
+        mainView->setSceneData( node );    
+        mainView->addEventHandler( new TestIsectPicker() );
 
         // create a picker of the specified size.
         RTTPicker* picker = new RTTPicker();

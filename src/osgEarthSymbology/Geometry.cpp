@@ -1,6 +1,6 @@
 /* -*-c++-*- */
 /* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
-* Copyright 2008-2014 Pelican Mapping
+* Copyright 2015 Pelican Mapping
 * http://osgearth.org
 *
 * osgEarth is free software; you can redistribute it and/or modify
@@ -8,10 +8,13 @@
 * the Free Software Foundation; either version 2 of the License, or
 * (at your option) any later version.
 *
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU Lesser General Public License for more details.
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+* IN THE SOFTWARE.
 *
 * You should have received a copy of the GNU Lesser General Public License
 * along with this program.  If not, see <http://www.gnu.org/licenses/>
@@ -294,6 +297,79 @@ Geometry::crop( const Polygon* cropPoly, osg::ref_ptr<Geometry>& output ) const
 #else // OSGEARTH_HAVE_GEOS
 
     OE_WARN << LC << "Crop failed - GEOS not available" << std::endl;
+    return false;
+
+#endif // OSGEARTH_HAVE_GEOS
+}
+
+bool
+Geometry::geounion( const Geometry* other, osg::ref_ptr<Geometry>& output ) const
+{
+#ifdef OSGEARTH_HAVE_GEOS
+    bool success = false;
+    output = 0L;
+
+    GEOSContext gc;
+
+    //Create the GEOS Geometries
+    geom::Geometry* inGeom   = gc.importGeometry( this );
+    geom::Geometry* otherGeom = gc.importGeometry( other );
+
+    if ( inGeom )
+    {    
+        geom::Geometry* outGeom = 0L;
+        try {
+            outGeom = overlay::OverlayOp::overlayOp(
+                inGeom,
+                otherGeom,
+                overlay::OverlayOp::opUNION );
+        }
+        catch(const geos::util::GEOSException& ex) {
+            OE_NOTICE << LC << "Union(GEOS): "
+                << (ex.what()? ex.what() : " no error message")
+                << std::endl;
+            outGeom = 0L;
+        }
+
+        if ( outGeom )
+        {
+            output = gc.exportGeometry( outGeom );
+
+            if ( output.valid())
+            {
+                if ( output->isValid() )
+                {
+                    success = true;
+                }
+                else
+                {
+                    // GEOS result is invalid
+                    output = 0L;
+                }
+            }
+            else
+            {
+                // set output to empty geometry to indicate the (valid) empty case,
+                // still returning false but allows for check.
+                if (outGeom->getNumPoints() == 0)
+                {
+                    output = new osgEarth::Symbology::Geometry();
+                }
+            }
+
+            gc.disposeGeometry( outGeom );
+        }
+    }
+
+    //Destroy the geometry
+    gc.disposeGeometry( otherGeom );
+    gc.disposeGeometry( inGeom );
+
+    return success;
+
+#else // OSGEARTH_HAVE_GEOS
+
+    OE_WARN << LC << "Union failed - GEOS not available" << std::endl;
     return false;
 
 #endif // OSGEARTH_HAVE_GEOS

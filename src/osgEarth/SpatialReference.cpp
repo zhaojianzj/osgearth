@@ -1,6 +1,6 @@
 /* -*-c++-*- */
 /* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
- * Copyright 2008-2014 Pelican Mapping
+ * Copyright 2015 Pelican Mapping
  * http://osgearth.org
  *
  * osgEarth is free software; you can redistribute it and/or modify
@@ -260,6 +260,7 @@ SpatialReference::create( const Key& key, bool useCache )
             "WGS84" );
 
         srs->_is_plate_carre = true;
+        srs->_is_geographic  = false;
     }
 
     // custom srs for the unified cube
@@ -782,12 +783,10 @@ SpatialReference::createUTMFromLonLat( const Angular& lon, const Angular& lat ) 
     return create( horiz, getVertInitString() );
 }
 
-const SpatialReference* 
-SpatialReference::createPlateCarreGeographicSRS() const
+const SpatialReference*
+SpatialReference::createEquirectangularSRS() const
 {
-    SpatialReference* pc = create( getKey(), false );
-    if ( pc ) pc->_is_plate_carre = true;
-    return pc;
+    return SpatialReference::create("+proj=eqc +units=m +no_defs", getVertInitString());
 }
 
 bool
@@ -1499,7 +1498,7 @@ SpatialReference::_init()
     _is_user_defined = false; 
     _is_contiguous = true;
     _is_cube = false;
-    if ( _is_ecef )
+    if ( _is_ecef || _is_plate_carre )
         _is_geographic = false;
     else
         _is_geographic = OSRIsGeographic( _handle ) != 0;

@@ -217,7 +217,7 @@ MACRO(SETUP_PLUGIN PLUGIN_NAME)
 # here we use the command to generate the library
 
     IF   (DYNAMIC_OSGEARTH)
-        ADD_LIBRARY(${TARGET_TARGETNAME} SHARED ${TARGET_SRC} ${TARGET_H} ${TARGET_GLSL} ${TARGET_IN})
+        ADD_LIBRARY(${TARGET_TARGETNAME} MODULE ${TARGET_SRC} ${TARGET_H} ${TARGET_GLSL} ${TARGET_IN})
     ELSE (DYNAMIC_OSGEARTH)
         ADD_LIBRARY(${TARGET_TARGETNAME} STATIC ${TARGET_SRC} ${TARGET_H} ${TARGET_GLSL} ${TARGET_IN})
     ENDIF(DYNAMIC_OSGEARTH)
@@ -289,7 +289,7 @@ MACRO(SETUP_EXTENSION PLUGIN_NAME)
 # here we use the command to generate the library
 
     IF   (DYNAMIC_OSGEARTH)
-        ADD_LIBRARY(${TARGET_TARGETNAME} SHARED ${TARGET_SRC} ${TARGET_H} ${TARGET_GLSL} ${TARGET_IN})
+        ADD_LIBRARY(${TARGET_TARGETNAME} MODULE ${TARGET_SRC} ${TARGET_H} ${TARGET_GLSL} ${TARGET_IN})
     ELSE (DYNAMIC_OSGEARTH)
         ADD_LIBRARY(${TARGET_TARGETNAME} STATIC ${TARGET_SRC} ${TARGET_H} ${TARGET_GLSL} ${TARGET_IN})
     ENDIF(DYNAMIC_OSGEARTH)
@@ -513,3 +513,15 @@ macro(configure_shaders templateFile autoGenCppFile)
 			"${CMAKE_SOURCE_DIR}/CMakeModules/ConfigureShaders.cmake.in" )
 	
 endmacro(configure_shaders)
+
+# http://stackoverflow.com/questions/7787823/cmake-how-to-get-the-name-of-all-subdirectories-of-a-directory
+MACRO(SUBDIRLIST result curdir)
+  FILE(GLOB children RELATIVE ${curdir} ${curdir}/*)
+  SET(dirlist "")
+  FOREACH(child ${children})
+    IF(IS_DIRECTORY ${curdir}/${child})
+        LIST(APPEND dirlist ${child})
+    ENDIF()
+  ENDFOREACH()
+  SET(${result} ${dirlist})
+ENDMACRO()

@@ -1,6 +1,6 @@
 /* -*-c++-*- */
 /* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
-* Copyright 2008-2014 Pelican Mapping
+* Copyright 2015 Pelican Mapping
 * http://osgearth.org
 *
 * osgEarth is free software; you can redistribute it and/or modify
@@ -8,10 +8,13 @@
 * the Free Software Foundation; either version 2 of the License, or
 * (at your option) any later version.
 *
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU Lesser General Public License for more details.
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+* IN THE SOFTWARE.
 *
 * You should have received a copy of the GNU Lesser General Public License
 * along with this program.  If not, see <http://www.gnu.org/licenses/>
@@ -21,6 +24,8 @@
 #include <osgEarth/Registry>
 #include <osg/NodeVisitor>
 #include <osg/Uniform>
+#include <osg/Geode>
+#include <osg/Geometry>
 
 using namespace osgEarth;
 
@@ -35,24 +40,24 @@ using namespace osgEarth;
 namespace
 {
     const char* indexVertexInit =
-        "#version 130\n"
+        "#version 330\n"
 
-        "#pragma vp_entryPoint \"oe_index_vert_initialize\" \n"
+        "#pragma vp_entryPoint \"oe_index_setObjectID\" \n"
         "#pragma vp_location   \"vertex_model\" \n"
-        "#pragma vp_order      \"-FLT_MAX\" \n"
+        "#pragma vp_order      \"first\" \n"
 
         "uniform uint oe_index_objectid_uniform; \n"   // override objectid if > 0
         "in uint      oe_index_objectid_attr; \n"      // Vertex attribute containing the object ID.
         "uint         oe_index_objectid; \n"           // Stage global containing the Object ID.
 
-        "void oe_index_vert_initialize(inout vec4 vertex) \n"
+        "void oe_index_setObjectID(inout vec4 vertex) \n"
         "{ \n"
-        "    if ( oe_index_objectid_uniform > uint(0) ) \n"
+        "    if ( oe_index_objectid_uniform > 0u ) \n"
         "        oe_index_objectid = oe_index_objectid_uniform; \n"
-        "    else if ( oe_index_objectid_attr > uint(0) ) \n"
+        "    else if ( oe_index_objectid_attr > 0u ) \n"
         "        oe_index_objectid = oe_index_objectid_attr; \n"
         "    else \n"
-        "        oe_index_objectid = uint(0); \n"
+        "        oe_index_objectid = 0u; \n"
         "} \n";
 }
 
@@ -104,7 +109,7 @@ ObjectIndex::insertImpl(osg::Referenced* object)
     // internal: assume mutex is locked
     ObjectID id = ++_idGen;
     _index[id] = object;
-    OE_DEBUG << "Insert " << id << "; size = " << _index.size() << "\n";
+    OE_DEBUG << LC << "Insert " << id << "; size = " << _index.size() << "\n";
     return id;
 }
 
@@ -152,15 +157,18 @@ ObjectIndex::tagDrawable(osg::Drawable* drawable, ObjectID id) const
         return;
 
     // add a new integer attributer to store the feautre ID per vertex.
-    osg::UIntArray* ids = new osg::UIntArray();
-    ids->setPreserveDataType(true);
+    ObjectIDArray* ids = new ObjectIDArray();
     geom->setVertexAttribArray    (_attribLocation, ids);
     geom->setVertexAttribBinding  (_attribLocation, osg::Geometry::BIND_PER_VERTEX);
     geom->setVertexAttribNormalize(_attribLocation, false);
+    
+#if OSG_VERSION_GREATER_OR_EQUAL(3,1,8)
+    ids->setPreserveDataType(true);
+#endif
 
     // The tag is actually FeatureID + 1, to preserve "0" as an "empty" value.
     // TODO: use a ObjectID generator and mapping instead.
-    ids->assign( geom->getVertexArray()->getNumElements(), (unsigned)id );
+    ids->assign( geom->getVertexArray()->getNumElements(), id );
 }
 
 namespace
@@ -221,6 +229,6 @@ ObjectIndex::tagNode(osg::Node* node, ObjectID id) const
     if ( node )
     {
         osg::StateSet* stateSet = node->getOrCreateStateSet();
-        stateSet->addUniform( new osg::Uniform(_oidUniformName.c_str(), (unsigned)id) );
+        stateSet->addUniform( new osg::Uniform(_oidUniformName.c_str(), id) );
     }
 }
